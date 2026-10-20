@@ -5,6 +5,41 @@ import BruteForce from "./modules/BruteForce";
 import FrequencyAnalysis from "./modules/FrequencyAnalysis";
 import PracticeLab from "./modules/PracticeLab";
 import Learn from "./modules/Learn";
+import Feedback from "./modules/Feedback";
+import CertificateSection from "./components/CertificateSection";
+import { LABS } from "./data/labs";
+import { evaluateCertificateEligibility } from "./utils/certificatePdf";
+
+const STORAGE_KEY = "cryptobreak-practice-progress";
+
+function buildInitialTaskState() {
+  const initial = {};
+  LABS.forEach((lab) => {
+    initial[lab.id] = {};
+    lab.tasks.forEach((t) => {
+      initial[lab.id][t.id] = {
+        completed: false,
+        pointsEarned: 0,
+        hintsUsed: 0,
+        availablePoints: t.points,
+      };
+    });
+  });
+  return initial;
+}
+
+function loadSavedTaskStates() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.allTaskStates) return parsed.allTaskStates;
+    }
+  } catch {
+    // fallback
+  }
+  return buildInitialTaskState();
+}
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -15,6 +50,22 @@ function App() {
       return "light";
     }
   });
+
+  const [allTaskStates, setAllTaskStates] = useState(loadSavedTaskStates);
+
+  // Sync state reactively across pages when practice tasks are solved
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      setAllTaskStates(loadSavedTaskStates());
+    };
+
+    window.addEventListener("cryptobreak-progress-updated", handleProgressUpdate);
+    window.addEventListener("storage", handleProgressUpdate);
+    return () => {
+      window.removeEventListener("cryptobreak-progress-updated", handleProgressUpdate);
+      window.removeEventListener("storage", handleProgressUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -51,7 +102,7 @@ function App() {
       icon: "🧪",
       title: "Practice Lab",
       description:
-        "Solve cryptanalysis challenges and test your understanding.",
+        "Solve cryptanalysis challenges across 5 labs and test your understanding.",
       page: "Practice Lab",
     },
   ];
@@ -122,6 +173,16 @@ function App() {
             Practice Lab
           </button>
 
+          <button
+            className={`nav-item ${
+              activePage === "Certificate" ? "active" : ""
+            }`}
+            onClick={() => setActivePage("Certificate")}
+          >
+            <span>📜</span>
+            Certificate
+          </button>
+
           <p className="nav-title learn-title">LEARN</p>
 
           <button
@@ -133,8 +194,17 @@ function App() {
             <span>📚</span>
             Concepts
           </button>
+          <p className="nav-title learn-title">FEEDBACK</p>
 
-
+          <button
+            className={`nav-item ${
+              activePage === "Feedback" ? "active" : ""
+            }`}
+            onClick={() => setActivePage("Feedback")}
+          >
+            <span>💬</span>
+            Feedback
+          </button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -184,7 +254,11 @@ function App() {
         </header>
 
         {activePage === "Dashboard" ? (
-          <Dashboard modules={modules} setActivePage={setActivePage} />
+          <Dashboard
+            modules={modules}
+            setActivePage={setActivePage}
+            allTaskStates={allTaskStates}
+          />
         ) : activePage === "Cipher Simulator" ? (
           <CipherSimulator />
         ) : activePage === "Brute Force" ? (
@@ -193,15 +267,23 @@ function App() {
           <FrequencyAnalysis />
         ) : activePage === "Practice Lab" ? (
           <PracticeLab />
+        ) : activePage === "Certificate" ? (
+          <div className="practice-lab-page" style={{ padding: "0 0 40px" }}>
+            <CertificateSection labs={LABS} allTaskStates={allTaskStates} />
+          </div>
         ) : activePage === "Learn" ? (
           <Learn />
+        ) : activePage === "Feedback" ? (
+          <Feedback setActivePage={setActivePage} />
         ) : null}
       </main>
     </div>
   );
 }
 
-function Dashboard({ modules, setActivePage }) {
+function Dashboard({ modules, setActivePage, allTaskStates }) {
+  const certEval = evaluateCertificateEligibility(LABS, allTaskStates);
+
   return (
     <div className="dashboard">
       {/* HERO */}
@@ -220,12 +302,22 @@ function Dashboard({ modules, setActivePage }) {
             brute-force attacks and frequency analysis.
           </p>
 
-          <button
-            className="primary-button"
-            onClick={() => setActivePage("Cipher Simulator")}
-          >
-            Start Experiment →
-          </button>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "8px" }}>
+            <button
+              className="primary-button"
+              onClick={() => setActivePage("Cipher Simulator")}
+            >
+              Start Experiment →
+            </button>
+            <button
+              type="button"
+              className="practice-action-btn btn-secondary"
+              onClick={() => setActivePage("Certificate")}
+              style={{ padding: "12px 20px", fontWeight: 700 }}
+            >
+              📜 View Certificate Progress
+            </button>
+          </div>
         </div>
 
         <div className="hero-visual">
@@ -248,11 +340,105 @@ function Dashboard({ modules, setActivePage }) {
         </div>
       </section>
 
+      {/* ACADEMY CREDENTIAL STATUS BANNER */}
+      <section
+        style={{
+          background: "var(--surface)",
+          border: "1.5px solid var(--border)",
+          borderRadius: "var(--r-xl)",
+          padding: "20px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+          <div>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                letterSpacing: "1.2px",
+                textTransform: "uppercase",
+                color: certEval.isEligible ? "#166534" : "#d97706",
+              }}
+            >
+              {certEval.isEligible ? "🏆 OFFICIAL ACCREDITATION UNLOCKED" : "🔒 ACADEMY CERTIFICATE OF COMPLETION"}
+            </span>
+            <h3 style={{ margin: "4px 0 0", fontSize: "1.2rem", fontWeight: 800 }}>
+              {certEval.isEligible
+                ? "Certificate of Completion Unlocked (500/500 PTS)"
+                : "Demonstrate Brute Force and Frequency Analysis"}
+            </h3>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="practice-action-btn btn-secondary"
+              onClick={() => setActivePage("Certificate")}
+            >
+              👁 Preview / View Certificate
+            </button>
+            <button
+              type="button"
+              className="practice-action-btn btn-start"
+              onClick={() => setActivePage("Practice Lab")}
+            >
+              ▶ Solve Practice Labs
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Stats */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px",
+          }}
+        >
+          <div style={{ background: "var(--bg)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block" }}>
+              LABS COMPLETED
+            </span>
+            <strong style={{ fontSize: "1.15rem", color: "var(--text-primary)" }}>
+              {certEval.completedLabsCount} / {certEval.totalLabsCount}
+            </strong>
+          </div>
+          <div style={{ background: "var(--bg)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block" }}>
+              TOTAL VERIFIED SCORE
+            </span>
+            <strong style={{ fontSize: "1.15rem", color: "var(--text-primary)" }}>
+              {certEval.totalVerifiedScore} / 500
+            </strong>
+          </div>
+          <div style={{ background: "var(--bg)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block" }}>
+              TASKS RESOLVED
+            </span>
+            <strong style={{ fontSize: "1.15rem", color: "var(--text-primary)" }}>
+              {certEval.totalTasksCompleted} / {certEval.totalTasksRequired}
+            </strong>
+          </div>
+          <div style={{ background: "var(--bg)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block" }}>
+              CREDENTIAL STATUS
+            </span>
+            <strong style={{ fontSize: "1.15rem", color: certEval.isEligible ? "#166534" : "#92400e" }}>
+              {certEval.isEligible ? "Certificate Unlocked" : "Pending Requirements"}
+            </strong>
+          </div>
+        </div>
+      </section>
+
       {/* STATS */}
       <section className="stats-grid">
         <Stat number="02" label="Attack Techniques" icon="⚔️" />
         <Stat number="26" label="Alphabet Size" icon="🔤" />
-        <Stat number="06" label="Lab Experiments" icon="🧪" />
+        <Stat number="05" label="Guided Laboratories" icon="🧪" />
         <Stat number="100%" label="Interactive" icon="⚡" />
       </section>
 
@@ -291,9 +477,7 @@ function Dashboard({ modules, setActivePage }) {
         <div>
           <span>CORE CONCEPT</span>
 
-          <h3>
-            What is Monoalphabetic Cryptanalysis?
-          </h3>
+          <h3>What is Monoalphabetic Cryptanalysis?</h3>
 
           <p>
             A monoalphabetic substitution cipher replaces every plaintext

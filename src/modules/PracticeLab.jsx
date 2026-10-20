@@ -1,30 +1,31 @@
 /**
- * PracticeLab — Redesigned University Virtual Laboratory
+ * PracticeLab — Interactive Cryptographic Learning Game & Laboratory
  *
- * Screens:
- *   1. Dashboard / Lab Selection
- *   2. Experiment Guidelines
- *   3. Task Workspace (sequential tasks)
- *   4. Task Completion feedback
- *   5. Final Lab Result Screen
- *
- * Architecture:
- *   - All crypto validation delegated to src/crypto/* engines.
- *   - Progress persisted to localStorage under "cryptobreak-practice-progress".
- *   - Best-score per lab is preserved across retries.
+ * Upgraded university-grade interactive cryptography workspace for CryptoBreak Lab.
+ * Features:
+ *   - 5 dedicated labs with 6 interactive tasks each (100 points per lab, 500 total).
+ *   - Progression & status tracking: Locked, Available, In Progress, Completed.
+ *   - Completion rule: Completed ONLY when all tasks in a lab are solved AND score = 100.
+ *   - Milestone Achievement Badges (7 collectible commendations).
+ *   - Dedicated interactive task workspace with real crypto controls (inputs, dropdowns,
+ *     sliders, brute-force engines, substitution mappers, and instant feedback).
+ *   - Reset Task capability to enable 100% completion recovery.
+ *   - Progressive hints with transparent point costs.
+ *   - Seamless Light/Dark theme integration and responsive UI.
  */
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { LABS, normalizeText } from "../data/labs";
 import { encrypt as caesarEncrypt, decrypt as caesarDecrypt } from "../crypto/caesar";
-import { encrypt as affineEncrypt } from "../crypto/affine";
 import {
-  encrypt as productEncrypt,
-  decrypt as productDecrypt,
-  getIntermediate,
-} from "../crypto/product";
+  encrypt as affineEncrypt,
+  decrypt as affineDecrypt,
+  modInverse,
+} from "../crypto/affine";
+import { getIntermediate } from "../crypto/product";
 import { getSortedFrequencies } from "../crypto/analysis";
 import { STANDARD_ALPHABET } from "../crypto/substitution";
+import CertificateSection from "../components/CertificateSection";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -32,16 +33,110 @@ import { STANDARD_ALPHABET } from "../crypto/substitution";
 const STORAGE_KEY = "cryptobreak-practice-progress";
 const LETTER_LIST = STANDARD_ALPHABET.split("");
 
+// Milestone Commendations
+const ACHIEVEMENTS = [
+  {
+    id: "first_breakthrough",
+    title: "First Breakthrough",
+    icon: "🎯",
+    description: "Complete your very first cryptography task.",
+    check: (allStates) => {
+      return Object.values(allStates || {}).some((labState) =>
+        Object.values(labState || {}).some((ts) => ts?.completed)
+      );
+    },
+  },
+  {
+    id: "caesar_sleuth",
+    title: "Caesar Sleuth",
+    icon: "🏛️",
+    description: "Score a perfect 100/100 on Caesar Cipher Investigation.",
+    check: (allStates) => {
+      const state = allStates?.[1] || {};
+      const lab = LABS[0];
+      const done = lab.tasks.every((t) => state[t.id]?.completed);
+      const score = lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      return done && score === 100;
+    },
+  },
+  {
+    id: "affine_architect",
+    title: "Affine Architect",
+    icon: "📐",
+    description: "Score a perfect 100/100 on Affine Cipher Workshop.",
+    check: (allStates) => {
+      const state = allStates?.[2] || {};
+      const lab = LABS[1];
+      const done = lab.tasks.every((t) => state[t.id]?.completed);
+      const score = lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      return done && score === 100;
+    },
+  },
+  {
+    id: "pipeline_specialist",
+    title: "Pipeline Specialist",
+    icon: "🔗",
+    description: "Score a perfect 100/100 on Product Cipher Laboratory.",
+    check: (allStates) => {
+      const state = allStates?.[3] || {};
+      const lab = LABS[2];
+      const done = lab.tasks.every((t) => state[t.id]?.completed);
+      const score = lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      return done && score === 100;
+    },
+  },
+  {
+    id: "frequency_decoder",
+    title: "Frequency Sleuth",
+    icon: "📊",
+    description: "Score a perfect 100/100 on Substitution & Frequency Analysis.",
+    check: (allStates) => {
+      const state = allStates?.[4] || {};
+      const lab = LABS[3];
+      const done = lab.tasks.every((t) => state[t.id]?.completed);
+      const score = lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      return done && score === 100;
+    },
+  },
+  {
+    id: "elite_cryptanalyst",
+    title: "Elite Cryptanalyst",
+    icon: "🕵️",
+    description: "Score a perfect 100/100 on Cryptanalysis Mission.",
+    check: (allStates) => {
+      const state = allStates?.[5] || {};
+      const lab = LABS[4];
+      const done = lab.tasks.every((t) => state[t.id]?.completed);
+      const score = lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      return done && score === 100;
+    },
+  },
+  {
+    id: "grandmaster",
+    title: "Cryptographic Grandmaster",
+    icon: "👑",
+    description: "Achieve the absolute maximum score of 500/500 across all 5 labs.",
+    check: (allStates) => {
+      let total = 0;
+      LABS.forEach((lab) => {
+        const state = allStates?.[lab.id] || {};
+        total += lab.tasks.reduce((acc, t) => acc + (state[t.id]?.pointsEarned || 0), 0);
+      });
+      return total === 500;
+    },
+  },
+];
+
 // ──────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
 function getPerformanceLabel(score, max) {
   const pct = max > 0 ? (score / max) * 100 : 0;
-  if (pct >= 90) return "Excellent";
-  if (pct >= 75) return "Very Good";
-  if (pct >= 60) return "Good";
-  if (pct >= 40) return "Needs Improvement";
-  return "Keep Practising";
+  if (pct >= 100) return "Mastery (100%)";
+  if (pct >= 85) return "Excellent";
+  if (pct >= 70) return "Very Good";
+  if (pct >= 50) return "Proficient";
+  return "In Training";
 }
 
 function buildInitialTaskState(lab) {
@@ -95,7 +190,7 @@ function saveToStorage(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
-    // Storage quota exceeded or private browsing — degrade gracefully
+    // Graceful degrade
   }
 }
 
@@ -112,57 +207,123 @@ function buildCandidate(ciphertext, mapping) {
   return result;
 }
 
+function formatEvidenceKey(key) {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[-_]/g, " ")
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
+}
+
+/**
+ * Computes status for a given lab: "completed" | "in-progress" | "available"
+ * Open Access: All five labs are immediately accessible in any order.
+ * Rule: Completed only when all tasks are solved AND score === 100.
+ */
+function getLabStatus(lab, allTaskStates) {
+  const labTasks = lab.tasks;
+  const labTaskStates = allTaskStates?.[lab.id] || {};
+  const tasksCompleted = labTasks.filter((t) => labTaskStates[t.id]?.completed).length;
+  const currentScore = labTasks.reduce(
+    (acc, t) => acc + (labTaskStates[t.id]?.pointsEarned || 0),
+    0
+  );
+
+  // Strict completion rule
+  if (tasksCompleted === labTasks.length && currentScore === 100) {
+    return "completed";
+  }
+
+  if (tasksCompleted > 0) {
+    return "in-progress";
+  }
+
+  // All labs are open and accessible immediately
+  return "available";
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // COMPONENT: Lab Selection Dashboard
 // ──────────────────────────────────────────────────────────────────────────────
-function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }) {
-  const completed = Object.values(progress).filter((p) => p.status === "completed").length;
-  const totalBest = Object.values(progress).reduce((acc, p) => acc + (p.bestScore || 0), 0);
-  const maxPossible = labs.reduce((acc, l) => acc + l.maxScore, 0);
-  const avgPct = completed > 0 ? Math.round((totalBest / (completed * 100)) * 100) : 0;
-  const overallPct = Math.round((completed / labs.length) * 100);
+function LabDashboard({ labs, allTaskStates, onStartLab, onResumeLab }) {
+  // Aggregate stats across all 5 labs
+  const labStats = useMemo(() => {
+    return labs.map((lab) => {
+      const status = getLabStatus(lab, allTaskStates);
+      const lState = allTaskStates?.[lab.id] || {};
+      const completedCount = lab.tasks.filter((t) => lState[t.id]?.completed).length;
+      const score = lab.tasks.reduce((acc, t) => acc + (lState[t.id]?.pointsEarned || 0), 0);
+      const firstIncompleteIdx = lab.tasks.findIndex((t) => !lState[t.id]?.completed);
+      return {
+        lab,
+        status,
+        completedCount,
+        score,
+        firstIncompleteIdx: firstIncompleteIdx === -1 ? 0 : firstIncompleteIdx,
+      };
+    });
+  }, [labs, allTaskStates]);
+
+  const completedLabsCount = labStats.filter((s) => s.status === "completed").length;
+  const inProgressLabsCount = labStats.filter((s) => s.status === "in-progress").length;
+  const totalEarnedPoints = labStats.reduce((acc, s) => acc + s.score, 0);
+  const maxPossiblePoints = 500;
+  const overallPct = Math.round((totalEarnedPoints / maxPossiblePoints) * 100);
+
+  // Milestone Achievements
+  const unlockedAchievements = useMemo(() => {
+    return ACHIEVEMENTS.map((ach) => ({
+      ...ach,
+      unlocked: ach.check(allTaskStates),
+    }));
+  }, [allTaskStates]);
 
   return (
     <div className="practice-lab-page">
+      {/* Header */}
       <header className="practice-lab-header">
-        <div className="practice-lab-eyebrow">VIRTUAL LABORATORY ASSESSMENT</div>
+        <div className="practice-lab-eyebrow">OPERATIONAL TRAINING LAB & SIMULATION</div>
         <h1 className="practice-lab-title">Practice Lab</h1>
         <p className="practice-lab-desc">
-          Apply the cryptographic concepts learned in CryptoBreak Lab through guided practical experiments.
+          Test and sharpen your cryptographic skills across 5 hands-on, interactive laboratories.
+          Execute manual transformations, deduce hidden parameters, launch brute-force decryptions,
+          and conduct realistic cryptanalytic operations.
         </p>
         <p className="practice-lab-subdesc">
-          Complete each experiment to progress from foundational cipher mechanics to practical cryptanalysis.
+          Each lab holds 100 points across 6 interactive tasks. Score a perfect 500/500 to attain
+          the title of Cryptographic Grandmaster.
         </p>
       </header>
 
+      {/* Progress Overview Section */}
       <section className="practice-lab-progress-section" aria-label="Laboratory Progress Overview">
         <div className="practice-lab-stats-grid">
           <div className="practice-stat-card">
-            <span className="practice-stat-label">EXPERIMENTS</span>
-            <strong className="practice-stat-value">{completed} / {labs.length}</strong>
-            <span className="practice-stat-sub">Completed</span>
+            <span className="practice-stat-label">LABS COMPLETED</span>
+            <strong className="practice-stat-value">{completedLabsCount} / 5</strong>
+            <span className="practice-stat-sub">Strict 100 Pts Req.</span>
           </div>
           <div className="practice-stat-card">
             <span className="practice-stat-label">TOTAL SCORE</span>
-            <strong className="practice-stat-value">{totalBest} / {maxPossible}</strong>
-            <span className="practice-stat-sub">Points</span>
+            <strong className="practice-stat-value">{totalEarnedPoints} / {maxPossiblePoints}</strong>
+            <span className="practice-stat-sub">Cumulative Points</span>
           </div>
           <div className="practice-stat-card">
-            <span className="practice-stat-label">AVERAGE</span>
-            <strong className="practice-stat-value">{completed > 0 ? `${avgPct}%` : "—"}</strong>
-            <span className="practice-stat-sub">Current Performance</span>
+            <span className="practice-stat-label">ACTIVE LABS</span>
+            <strong className="practice-stat-value">{inProgressLabsCount} In Progress</strong>
+            <span className="practice-stat-sub">Live Sessions</span>
           </div>
           <div className="practice-stat-card">
             <span className="practice-stat-label">OVERALL PROGRESS</span>
             <strong className="practice-stat-value">{overallPct}%</strong>
-            <span className="practice-stat-sub">{completed} of {labs.length} completed</span>
+            <span className="practice-stat-sub">Academy Readiness</span>
           </div>
         </div>
 
         <div className="practice-overall-bar-card">
           <div className="practice-overall-bar-header">
-            <span className="practice-overall-bar-title">OVERALL LAB PROGRESS</span>
-            <span className="practice-overall-bar-pct">{overallPct}%</span>
+            <span className="practice-overall-bar-title">OVERALL ACADEMY MASTERY PROGRESS</span>
+            <span className="practice-overall-bar-pct">{overallPct}% ({totalEarnedPoints} / 500 PTS)</span>
           </div>
           <div className="practice-progress-track">
             <div
@@ -177,45 +338,74 @@ function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }
         </div>
       </section>
 
+      {/* Milestone Achievements Bar */}
+      <section className="practice-achievements-section" aria-label="Milestone Commendations">
+        <div className="practice-section-header">
+          <h2 className="practice-section-title">FIELD COMMENDATIONS & ACHIEVEMENTS</h2>
+          <p className="practice-section-desc">
+            Earn milestone badges by solving forensic challenges and achieving perfect laboratory scores.
+          </p>
+        </div>
+        <div className="practice-achievements-grid">
+          {unlockedAchievements.map((ach) => (
+            <div
+              key={ach.id}
+              className={`practice-achievement-card ${ach.unlocked ? "unlocked" : "locked"}`}
+              title={ach.description}
+            >
+              <div className="achievement-icon">{ach.icon}</div>
+              <div className="achievement-info">
+                <span className="achievement-title">{ach.title}</span>
+                <span className="achievement-status">{ach.unlocked ? "✓ Unlocked" : "🔒 In Progress"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Practical Experiments Section */}
       <section className="practice-experiments-section" aria-label="Practical Experiments">
         <div className="practice-section-header">
-          <h2 className="practice-section-title">PRACTICAL EXPERIMENTS</h2>
+          <h2 className="practice-section-title">FIVE GUIDED CRYPTOGRAPHY LABORATORIES</h2>
           <p className="practice-section-desc">
-            5 guided experiments designed to build your cryptanalysis skills.
+            Progress sequentially through foundational shift mechanics up to advanced cryptanalysis.
           </p>
         </div>
 
         <div className="practice-cards-grid">
-          {labs.map((lab) => {
-            const lp = progress[lab.id] || {};
-            const isDone = lp.status === "completed";
-            const isStarted = lp.status === "in-progress";
+          {labStats.map(({ lab, status, completedCount, score, firstIncompleteIdx }) => {
+            const isCompleted = status === "completed";
+            const isInProgress = status === "in-progress";
 
-            const labTaskStates = allTaskStates?.[lab.id] || {};
-            const tasksCompleted = lab.tasks.filter((t) => labTaskStates[t.id]?.completed).length;
-            const currentScore = lab.tasks.reduce(
-              (acc, t) => acc + (labTaskStates[t.id]?.pointsEarned || 0),
-              0
-            );
-            const firstIncompleteIdx = lab.tasks.findIndex((t) => !labTaskStates[t.id]?.completed);
-            const currentTaskNum = firstIncompleteIdx === -1 ? lab.tasks.length : firstIncompleteIdx + 1;
-            const inProgressPct = Math.round((tasksCompleted / lab.tasks.length) * 100);
+            const progressPct = Math.round((completedCount / lab.tasks.length) * 100);
 
             return (
               <article
                 key={lab.id}
                 className={`practice-lab-card ${
-                  isDone ? "card-completed" : isStarted ? "card-in-progress" : "card-not-started"
+                  isCompleted
+                    ? "card-completed"
+                    : isInProgress
+                    ? "card-in-progress"
+                    : "card-available"
                 }`}
               >
                 <div className="practice-card-header">
                   <span className="practice-card-exp-num">LAB {lab.number}</span>
                   <span
                     className={`practice-card-badge ${
-                      isDone ? "badge-completed" : isStarted ? "badge-in-progress" : "badge-not-started"
+                      isCompleted
+                        ? "badge-completed"
+                        : isInProgress
+                        ? "badge-in-progress"
+                        : "badge-available"
                     }`}
                   >
-                    {isDone ? "✓ Completed" : isStarted ? "● In Progress" : "● Not Started"}
+                    {isCompleted
+                      ? "✓ Completed (100 Pts)"
+                      : isInProgress
+                      ? "● In Progress"
+                      : "○ Available"}
                   </span>
                 </div>
 
@@ -224,30 +414,37 @@ function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }
                   <h3 className="practice-card-title">{lab.title}</h3>
                   <p className="practice-card-desc">{lab.shortDescription}</p>
 
-                  {isStarted && !isDone && (
+                  {/* Objective statement */}
+                  <div className="practice-card-objective">
+                    <span className="obj-label">Objective:</span> {lab.objective}
+                  </div>
+
+                  {isInProgress && (
                     <div className="practice-card-live-status">
                       <div className="practice-live-status-row">
-                        <span className="live-status-label">Progress</span>
-                        <strong className="live-status-val">Task {currentTaskNum} of {lab.tasks.length}</strong>
+                        <span className="live-status-label">Active Task</span>
+                        <strong className="live-status-val">
+                          Task {firstIncompleteIdx + 1} of {lab.tasks.length}
+                        </strong>
                       </div>
                       <div className="practice-live-status-row">
                         <span className="live-status-label">Current Score</span>
-                        <strong className="live-status-val">{currentScore} / {lab.maxScore}</strong>
+                        <strong className="live-status-val">{score} / {lab.maxScore} Pts</strong>
                       </div>
                       <div className="practice-mini-track">
-                        <div className="practice-mini-fill" style={{ width: `${inProgressPct}%` }} />
+                        <div className="practice-mini-fill" style={{ width: `${progressPct}%` }} />
                       </div>
                     </div>
                   )}
 
-                  {isDone && (
+                  {isCompleted && (
                     <div className="practice-card-completed-status">
                       <div className="practice-completed-row">
-                        <span className="completed-label">Score</span>
-                        <strong className="completed-val">{lp.bestScore} / {lab.maxScore}</strong>
+                        <span className="completed-label">Final Evaluated Score</span>
+                        <strong className="completed-val">{score} / {lab.maxScore} PTS</strong>
                       </div>
                       <span className="practice-perf-chip">
-                        {getPerformanceLabel(lp.bestScore, lab.maxScore)}
+                        {getPerformanceLabel(score, lab.maxScore)}
                       </span>
                     </div>
                   )}
@@ -269,7 +466,7 @@ function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }
                     <strong className="meta-value">{lab.maxScore} Points</strong>
                   </div>
                   <div className="practice-meta-item">
-                    <span className="meta-label">EST. TIME</span>
+                    <span className="meta-label">EST. DURATION</span>
                     <strong className="meta-value">{lab.estimatedTime}</strong>
                   </div>
                 </div>
@@ -278,16 +475,24 @@ function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }
                   <button
                     type="button"
                     className={`practice-action-btn ${
-                      isDone ? "btn-review" : isStarted ? "btn-resume" : "btn-start"
+                      isCompleted ? "btn-review" : isInProgress ? "btn-resume" : "btn-start"
                     }`}
-                    onClick={() =>
-                      isStarted
-                        ? onResumeLab(lab.id, firstIncompleteIdx === -1 ? 0 : firstIncompleteIdx)
-                        : onStartLab(lab.id)
-                    }
-                    aria-label={`${isDone ? "Review" : isStarted ? "Resume" : "Start"} Lab ${lab.number}: ${lab.title}`}
+                    onClick={() => {
+                      if (isInProgress) {
+                        onResumeLab(lab.id, firstIncompleteIdx);
+                      } else {
+                        onStartLab(lab.id);
+                      }
+                    }}
+                    aria-label={`${
+                      isCompleted ? "Review" : isInProgress ? "Continue" : "Start"
+                    } Lab ${lab.number}: ${lab.title}`}
                   >
-                    {isDone ? "↺ Review Lab" : isStarted ? "▶ Resume Lab" : "▶ Start Lab"}
+                    {isCompleted
+                      ? "↺ Review Lab"
+                      : isInProgress
+                      ? "▶ Continue Lab"
+                      : "▶ Start Lab"}
                   </button>
                 </div>
               </article>
@@ -295,6 +500,9 @@ function LabDashboard({ labs, progress, allTaskStates, onStartLab, onResumeLab }
           })}
         </div>
       </section>
+
+      {/* Official Academy Certificate of Completion Section */}
+      <CertificateSection labs={labs} allTaskStates={allTaskStates} />
     </div>
   );
 }
@@ -307,33 +515,34 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
     <div className="practice-lab-page">
       <div className="practice-screen-nav">
         <button type="button" className="practice-nav-back-btn" onClick={onBack}>
-          ← Back to Practice Lab
+          ← Return to Practice Labs
         </button>
         <div className="practice-nav-crumbs">
-          <span>Practice Lab</span> / <strong>Experiment {lab.number}</strong>
+          <span>Practice Lab</span> / <strong>Lab {lab.number}: {lab.title}</strong>
         </div>
       </div>
 
       <div className="practice-guidelines-card">
         <div className="practice-guidelines-header">
-          <div className="practice-exp-tag">EXPERIMENT {lab.number}</div>
+          <div className="practice-exp-tag">LABORATORY BRIEFING — LAB {lab.number}</div>
           <h2 className="practice-guidelines-title">{lab.title}</h2>
           <div className="practice-guidelines-category">{lab.category}</div>
           <div className="practice-guidelines-meta-pills">
             <span className="guideline-pill">{lab.difficulty}</span>
             <span className="guideline-pill">{lab.estimatedTime}</span>
             <span className="guideline-pill">{lab.maxScore} Points Maximum</span>
+            <span className="guideline-pill">{lab.tasks.length} Interactive Tasks</span>
           </div>
         </div>
 
         <div className="practice-guidelines-body">
           <section className="guideline-block">
-            <h4 className="guideline-heading">Objective</h4>
+            <h4 className="guideline-heading">Laboratory Objective</h4>
             <p className="guideline-text">{lab.objective}</p>
           </section>
 
           <section className="guideline-block">
-            <h4 className="guideline-heading">What You Will Do</h4>
+            <h4 className="guideline-heading">Operational Tasks</h4>
             <ol className="guideline-ordered-list">
               {lab.guidelines.whatYouWillDo.map((item, i) => (
                 <li key={i}>{item}</li>
@@ -342,7 +551,7 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
           </section>
 
           <section className="guideline-block">
-            <h4 className="guideline-heading">What You Need to Know</h4>
+            <h4 className="guideline-heading">Cryptographic Principles Required</h4>
             <ul className="guideline-bullet-list">
               {lab.guidelines.whatYouNeedToKnow.map((item, i) => (
                 <li key={i}>{item}</li>
@@ -351,7 +560,7 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
           </section>
 
           <section className="guideline-block">
-            <h4 className="guideline-heading">Instructions</h4>
+            <h4 className="guideline-heading">Grading & Rules of Engagement</h4>
             <ul className="guideline-bullet-list">
               {lab.guidelines.instructions.map((item, i) => (
                 <li key={i}>{item}</li>
@@ -361,11 +570,11 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
 
           <div className="guideline-summary-grid">
             <div className="guideline-summary-item">
-              <span className="summary-label">Maximum Score</span>
+              <span className="summary-label">Target Score</span>
               <strong className="summary-val">{lab.maxScore} points</strong>
             </div>
             <div className="guideline-summary-item">
-              <span className="summary-label">Number of Tasks</span>
+              <span className="summary-label">Task Count</span>
               <strong className="summary-val">{lab.tasks.length} tasks</strong>
             </div>
             <div className="guideline-summary-item">
@@ -373,7 +582,7 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
               <strong className="summary-val">{lab.estimatedTime}</strong>
             </div>
             <div className="guideline-summary-item">
-              <span className="summary-label">Difficulty Level</span>
+              <span className="summary-label">Difficulty</span>
               <strong className="summary-val">{lab.difficulty}</strong>
             </div>
           </div>
@@ -384,9 +593,9 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
             type="button"
             className="practice-action-btn btn-start large"
             onClick={onStart}
-            aria-label={`Start Experiment ${lab.number}: ${lab.title}`}
+            aria-label={`Enter Lab ${lab.number} Workspace`}
           >
-            ▶ Start Experiment
+            ▶ Launch Laboratory Workspace
           </button>
         </div>
       </div>
@@ -397,45 +606,64 @@ function GuidelinesScreen({ lab, onStart, onBack }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // COMPONENT: Task Progress Header
 // ──────────────────────────────────────────────────────────────────────────────
-function TaskProgressHeader({ lab, currentTaskIndex, taskStates, totalScore }) {
+function TaskProgressHeader({
+  lab,
+  currentTaskIndex,
+  taskStates,
+  totalScore,
+  onSelectTask,
+}) {
+  const currentTaskNum = currentTaskIndex + 1;
+  const progressPct = Math.round((currentTaskNum / lab.tasks.length) * 100);
+
   return (
     <div className="practice-task-header-card">
       <div className="task-header-top-row">
         <div>
-          <div className="practice-exp-tag">EXPERIMENT {lab.number}</div>
+          <div className="practice-exp-tag">LAB {lab.number} WORKSPACE</div>
           <h2 className="task-header-lab-title">{lab.title}</h2>
-          <span className="task-header-position">Task {currentTaskIndex + 1} of {lab.tasks.length}</span>
+          <div className="task-header-position">
+            Task {currentTaskNum} of {lab.tasks.length} — {lab.difficulty} Difficulty
+          </div>
         </div>
         <div className="task-header-score-box">
-          <span className="score-box-label">CURRENT SCORE</span>
+          <span className="score-box-label">CURRENT LAB SCORE</span>
           <div className="score-box-num">
             <strong>{totalScore}</strong> <span>/ {lab.maxScore} Points</span>
           </div>
         </div>
       </div>
 
+      {/* Visible Progress Bar */}
       <div className="task-header-progress-track">
         <div
           className="task-header-progress-fill"
-          style={{ width: `${Math.max(5, ((currentTaskIndex + 1) / lab.tasks.length) * 100)}%` }}
+          style={{ width: `${Math.max(8, progressPct)}%` }}
         />
       </div>
 
-      <div className="task-header-indicators">
+      {/* Task Navigator Selector Pills */}
+      <div className="task-header-indicators" role="tablist" aria-label="Task navigation">
         {lab.tasks.map((t, idx) => {
           const ts = taskStates[t.id];
           const isCurrent = idx === currentTaskIndex;
           const isDone = ts?.completed;
           return (
-            <div
+            <button
               key={t.id}
+              type="button"
               className={`task-indicator-pill ${
                 isDone ? "pill-done" : isCurrent ? "pill-current" : "pill-pending"
               }`}
-              title={`Task ${t.id}: ${t.title}`}
+              onClick={() => onSelectTask(idx)}
+              title={`Task ${t.id}: ${t.title} (${isDone ? `${ts.pointsEarned} pts earned` : `${t.points} pts`})`}
+              aria-label={`Go to Task ${t.id}`}
+              aria-selected={isCurrent}
             >
-              <span className="pill-num">{t.id}</span>
-            </div>
+              <span className="pill-num">
+                {isDone ? `✓ T${t.id}` : `T${t.id}`}
+              </span>
+            </button>
           );
         })}
       </div>
@@ -446,10 +674,20 @@ function TaskProgressHeader({ lab, currentTaskIndex, taskStates, totalScore }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // COMPONENT: Task Workspace
 // ──────────────────────────────────────────────────────────────────────────────
-function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
+function TaskWorkspace({
+  task,
+  taskIndex,
+  totalTasks,
+  taskState,
+  onUpdateState,
+  onVerify,
+  onResetTask,
+  onNextTask,
+}) {
   const { type, given, options } = task;
   const isCompleted = taskState.completed;
 
+  // Brute force candidates table
   const bruteCandidates = useMemo(() => {
     if (type !== "brute-force-action" && type !== "candidate-select") return [];
     const ct = given?.ciphertext || "";
@@ -459,22 +697,37 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
     }));
   }, [type, given]);
 
+  // Frequency table
   const freqData = useMemo(() => {
     if (type !== "freq-observation") return [];
     const ct = given?.ciphertext || "";
     return getSortedFrequencies(ct).filter((f) => f.count > 0);
   }, [type, given]);
 
+  // Live substitution candidate preview
   const liveCandidate = useMemo(() => {
     if (type !== "mapping-interactive") return "";
     return buildCandidate(given?.ciphertext || "", taskState.mapping || {});
   }, [type, given, taskState.mapping]);
 
+  // Mapping duplicate detector for bijective constraint
+  const mappingCollisions = useMemo(() => {
+    if (type !== "mapping-interactive") return [];
+    const counts = {};
+    Object.entries(taskState.mapping || {}).forEach(([, p]) => {
+      if (p) {
+        counts[p] = (counts[p] || 0) + 1;
+      }
+    });
+    return Object.keys(counts).filter((p) => counts[p] > 1);
+  }, [type, taskState.mapping]);
+
+  // Progressive Hint
   const handleHint = () => {
     const usedCount = taskState.hintsUsed;
     if (usedCount >= task.hints.length) return;
     const hint = task.hints[usedCount];
-    const deduction = hint.cost || 5;
+    const deduction = hint.cost || 3;
     onUpdateState({
       hintsUsed: usedCount + 1,
       availablePoints: Math.max(0, taskState.availablePoints - deduction),
@@ -483,20 +736,78 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
   };
 
   const hintAvailable = taskState.hintsUsed < task.hints.length && !isCompleted;
+  const isLastTask = taskIndex >= totalTasks - 1;
 
   return (
     <div className="practice-task-workspace-card">
+      {/* Workspace Header */}
       <div className="task-workspace-header">
-        <div className="task-workspace-tag">TASK {task.id.toString().padStart(2, "0")}</div>
-        <div className="task-workspace-points">{taskState.availablePoints} Points Available</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <div className="task-workspace-tag">
+            TASK {task.id.toString().padStart(2, "0")} OF {totalTasks.toString().padStart(2, "0")}
+          </div>
+          {task.caseId && <span className="case-id-badge">{task.caseId}</span>}
+        </div>
+        <div className="task-workspace-points">
+          {isCompleted
+            ? `${taskState.pointsEarned} / ${task.points} Pts Earned`
+            : `${taskState.availablePoints} / ${task.points} Pts Available`}
+        </div>
       </div>
 
       <h3 className="task-workspace-title">{task.title}</h3>
+
+      {/* Case File Scenario Dossier */}
+      {task.scenario && (
+        <div className="case-scenario-box">
+          <div className="case-scenario-header">
+            <span className="case-scenario-icon">📁</span>
+            <span className="case-scenario-label">CASE FILE SCENARIO</span>
+          </div>
+          <p className="case-scenario-text">{task.scenario}</p>
+        </div>
+      )}
+
+      {/* Forensic Investigation Objective */}
+      {task.objective && (
+        <div className="case-objective-box">
+          <span className="case-obj-label">INVESTIGATION OBJECTIVE:</span>
+          <span className="case-obj-text">{task.objective}</span>
+        </div>
+      )}
+
       <p className="task-workspace-desc">{task.description}</p>
 
+      {/* Exhibit Evidence Dossier */}
+      {task.evidence && Object.keys(task.evidence).length > 0 && (
+        <div className="case-evidence-dossier">
+          <div className="evidence-dossier-header">
+            <span className="evidence-icon">🔍</span>
+            <span>EXHIBIT EVIDENCE & INTERCEPT TELEMETRY</span>
+          </div>
+          <div className="evidence-cards-grid">
+            {Object.entries(task.evidence).map(([k, v]) => (
+              <div key={k} className="evidence-card">
+                <span className="evidence-label">{formatEvidenceKey(k)}</span>
+                <div className="evidence-content">
+                  {typeof v === "string" && v.length > 50 ? (
+                    <code className="evidence-code-block">{v}</code>
+                  ) : typeof v === "string" && (v.includes("=") || v.includes("mod") || v.length > 20) ? (
+                    <code className="evidence-code-inline">{v}</code>
+                  ) : (
+                    <span className="evidence-text">{String(v)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Given Experimental Parameters */}
       {given && (
         <div className="task-given-box">
-          <div className="given-box-header">GIVEN EXPERIMENTAL PARAMETERS</div>
+          <div className="given-box-header">CRYPTOGRAPHIC PARAMETERS & SYSTEM STATE</div>
           <div className="given-box-grid">
             {given.plaintext && (
               <div className="given-row">
@@ -516,56 +827,77 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
                 <code className="given-code">{given.shift}</code>
               </div>
             )}
+            {given.letter && (
+              <div className="given-row">
+                <span className="given-label">Target Letter</span>
+                <code className="given-code">{given.letter} (x = {given.index})</code>
+              </div>
+            )}
             {given.a !== undefined && (
               <div className="given-row">
-                <span className="given-label">Affine Key a</span>
+                <span className="given-label">Multiplier Key (a)</span>
                 <code className="given-code">{given.a}</code>
               </div>
             )}
             {given.b !== undefined && (
               <div className="given-row">
-                <span className="given-label">Affine Key b</span>
+                <span className="given-label">Additive Key (b)</span>
                 <code className="given-code">{given.b}</code>
+              </div>
+            )}
+            {given.a_inv !== undefined && (
+              <div className="given-row">
+                <span className="given-label">Modular Inverse a⁻¹</span>
+                <code className="given-code">{given.a_inv}</code>
               </div>
             )}
             {given.caesarShift !== undefined && (
               <div className="given-row">
-                <span className="given-label">Caesar Shift</span>
+                <span className="given-label">Layer 1 Shift (K)</span>
                 <code className="given-code">{given.caesarShift}</code>
               </div>
             )}
             {given.affineA !== undefined && (
               <div className="given-row">
-                <span className="given-label">Affine a</span>
+                <span className="given-label">Layer 2 Key a</span>
                 <code className="given-code">{given.affineA}</code>
               </div>
             )}
             {given.affineB !== undefined && (
               <div className="given-row">
-                <span className="given-label">Affine b</span>
+                <span className="given-label">Layer 2 Key b</span>
                 <code className="given-code">{given.affineB}</code>
               </div>
             )}
-            {given.description && (
-              <div className="given-row" style={{ gridColumn: "1 / -1" }}>
-                <span className="given-label">Pipeline Order</span>
-                <span className="given-code" style={{ fontFamily: "inherit" }}>{given.description}</span>
+            {given.intermediate && (
+              <div className="given-row">
+                <span className="given-label">Intermediate Text</span>
+                <code className="given-code">{given.intermediate}</code>
+              </div>
+            )}
+            {given.alphabetSize && (
+              <div className="given-row">
+                <span className="given-label">Alphabet Modulus</span>
+                <code className="given-code">m = {given.alphabetSize} (A=0..Z=25)</code>
               </div>
             )}
           </div>
         </div>
       )}
 
+      {/* INPUT CONTROLS ACCORDING TO TASK TYPE */}
+
+      {/* Type: Text Answer */}
       {type === "text-answer" && (
         <div className="task-input-group">
           <label htmlFor={`task-text-${task.id}`} className="task-input-label">
-            Your Answer:
+            Your Forensic Plaintext/Ciphertext Input:
           </label>
           <input
             id={`task-text-${task.id}`}
             type="text"
             className="task-input-field"
-            placeholder="Enter your answer here..."
+            placeholder="Type your recovered answer here..."
             value={taskState.textInput}
             disabled={isCompleted}
             onChange={(e) => onUpdateState({ textInput: e.target.value, feedback: null })}
@@ -574,27 +906,27 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Number Answer */}
       {type === "number-answer" && (
         <div className="task-input-group">
           <label htmlFor={`task-num-${task.id}`} className="task-input-label">
-            Your Answer (Shift value 0–25):
+            Computed Integer Value:
           </label>
           <input
             id={`task-num-${task.id}`}
             type="number"
-            min="0"
-            max="25"
             className="task-input-field"
-            style={{ maxWidth: "220px" }}
-            placeholder="Enter shift value..."
+            style={{ maxWidth: "240px" }}
+            placeholder="Enter integer..."
             value={taskState.numberInput}
             disabled={isCompleted}
             onChange={(e) => onUpdateState({ numberInput: e.target.value, feedback: null })}
-            aria-label="Numeric shift value input"
+            aria-label="Numeric input"
           />
         </div>
       )}
 
+      {/* Type: Multiple Choice */}
       {type === "multiple-choice" && (
         <div className="mc-options-container">
           {options.map((opt, idx) => (
@@ -605,7 +937,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
               onClick={() => !isCompleted && onUpdateState({ selectedChoice: idx, feedback: null })}
               disabled={isCompleted}
               aria-pressed={taskState.selectedChoice === idx}
-              aria-label={`Option ${idx + 1}: ${opt}`}
+              aria-label={`Option ${String.fromCharCode(65 + idx)}: ${opt}`}
             >
               <span className="mc-option-radio">{String.fromCharCode(65 + idx)}</span>
               <span>{opt}</span>
@@ -614,6 +946,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Brute Force Action */}
       {type === "brute-force-action" && (
         <div className="task-input-group">
           {!taskState.bruteForceRan ? (
@@ -622,19 +955,19 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
               className="practice-action-btn btn-start"
               style={{ alignSelf: "flex-start" }}
               onClick={() => onUpdateState({ bruteForceRan: true, feedback: null })}
-              aria-label="Run brute force search on ciphertext"
+              aria-label="Launch exhaustive brute force engine"
             >
-              ▶ Run Exhaustive Brute-Force
+              ▶ Run Exhaustive Brute-Force Engine
             </button>
           ) : (
             <>
               <div className="given-box-header" style={{ marginBottom: "8px" }}>
-                ALL 26 SHIFT CANDIDATES GENERATED
+                ALL 26 KEY CANDIDATES EXHAUSTIVELY COMPUTED
               </div>
               <div className="brute-table-container">
                 {bruteCandidates.map(({ shift, text }) => (
                   <div key={shift} className="brute-candidate-row">
-                    <span style={{ color: "var(--primary)", fontWeight: 700, minWidth: "60px" }}>
+                    <span style={{ color: "var(--primary)", fontWeight: 700, minWidth: "65px" }}>
                       K = {shift.toString().padStart(2, "0")}
                     </span>
                     <span>{text}</span>
@@ -646,22 +979,27 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Candidate Select */}
       {type === "candidate-select" && (
         <div className="task-input-group">
           <div className="given-box-header" style={{ marginBottom: "8px" }}>
-            SELECT THE MEANINGFUL ENGLISH CANDIDATE
+            SELECT THE INTELLIGIBLE CANDIDATE STREAM
           </div>
           <div className="brute-table-container">
             {bruteCandidates.map(({ shift, text }) => (
               <button
                 key={shift}
                 type="button"
-                className={`brute-candidate-row ${taskState.selectedCandidateShift === shift ? "selected" : ""}`}
-                onClick={() => !isCompleted && onUpdateState({ selectedCandidateShift: shift, feedback: null })}
+                className={`brute-candidate-row ${
+                  taskState.selectedCandidateShift === shift ? "selected" : ""
+                }`}
+                onClick={() =>
+                  !isCompleted && onUpdateState({ selectedCandidateShift: shift, feedback: null })
+                }
                 disabled={isCompleted}
                 aria-pressed={taskState.selectedCandidateShift === shift}
               >
-                <span style={{ color: "var(--primary)", fontWeight: 700, minWidth: "60px" }}>
+                <span style={{ color: "var(--primary)", fontWeight: 700, minWidth: "65px" }}>
                   K = {shift.toString().padStart(2, "0")}
                 </span>
                 <span>{text}</span>
@@ -671,6 +1009,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Multi-Select */}
       {type === "multi-select" && (
         <div className="task-input-group">
           <p className="task-input-label">Select all valid coprime multiplier values (gcd(a, 26) = 1):</p>
@@ -706,10 +1045,11 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Frequency Observation */}
       {type === "freq-observation" && (
         <div className="task-input-group">
           <div className="given-box-header" style={{ marginBottom: "8px" }}>
-            CIPHERTEXT LETTER FREQUENCY TABLE
+            CIPHERTEXT LETTER FREQUENCY DISTRIBUTION
           </div>
           <div className="freq-table-container">
             <div className="freq-table-head">
@@ -727,31 +1067,40 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
           </div>
           <div style={{ marginTop: "16px" }}>
             <label htmlFor="freq-most-freq" className="task-input-label">
-              Most Frequent Ciphertext Letter
+              Most Frequent Ciphertext Letter:
             </label>
             <input
               id="freq-most-freq"
               type="text"
               maxLength={1}
               className="task-input-field"
-              style={{ maxWidth: "120px", textTransform: "uppercase", textAlign: "center", fontWeight: 700 }}
+              style={{
+                maxWidth: "120px",
+                textTransform: "uppercase",
+                textAlign: "center",
+                fontWeight: 700,
+              }}
               placeholder="A–Z"
               value={taskState.freqMostFrequent}
               disabled={isCompleted}
               onChange={(e) =>
-                onUpdateState({ freqMostFrequent: e.target.value.toUpperCase().replace(/[^A-Z]/g, ""), feedback: null })
+                onUpdateState({
+                  freqMostFrequent: e.target.value.toUpperCase().replace(/[^A-Z]/g, ""),
+                  feedback: null,
+                })
               }
-              aria-label="Enter the most frequent ciphertext letter"
+              aria-label="Enter the most frequent letter"
             />
           </div>
         </div>
       )}
 
+      {/* Type: Mapping Hypothesis */}
       {type === "mapping-hypothesis" && (
         <div className="task-input-group">
           <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
             <div className="given-row">
-              <span className="given-label">Ciphertext Letter</span>
+              <span className="given-label">Ciphertext Outlier</span>
               <code className="given-code" style={{ fontSize: "1.2rem", fontWeight: 700, textAlign: "center" }}>
                 {given?.cipherLetter}
               </code>
@@ -763,7 +1112,13 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
                 type="text"
                 maxLength={1}
                 className="task-input-field"
-                style={{ width: "80px", textTransform: "uppercase", textAlign: "center", fontSize: "1.2rem", fontWeight: 700 }}
+                style={{
+                  width: "90px",
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                  fontSize: "1.2rem",
+                  fontWeight: 700,
+                }}
                 placeholder="A–Z"
                 value={taskState.mappingHypothesisInput}
                 disabled={isCompleted}
@@ -773,7 +1128,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
                     feedback: null,
                   })
                 }
-                aria-label="Enter your hypothesis for the plaintext letter"
+                aria-label="Hypothesized plaintext letter"
               />
             </div>
           </div>
@@ -784,11 +1139,23 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Type: Mapping Interactive */}
       {type === "mapping-interactive" && (
         <div className="task-input-group">
           <div className="given-box-header" style={{ marginBottom: "8px" }}>
-            SUBSTITUTION KEY MAPPER (ASSIGN PLAINTEXT LETTERS TO CIPHERTEXT LETTERS)
+            SUBSTITUTION KEY MAPPER (ASSIGN PLAINTEXT VALUES TO CIPHERTEXT LETTERS)
           </div>
+
+          {/* Bijective Constraint Warning */}
+          {mappingCollisions.length > 0 && (
+            <div className="mapping-collision-alert" role="alert">
+              <span>⚠️ One-to-one constraint violation:</span>
+              <span>
+                Plaintext letter(s) <strong>{mappingCollisions.join(", ")}</strong> mapped to multiple ciphertext letters!
+              </span>
+            </div>
+          )}
+
           <div className="mapping-panel">
             {Array.from(new Set((given?.ciphertext || "").replace(/[^A-Z]/g, ""))).sort().map((ch) => {
               const isLocked = given?.providedClues?.[ch];
@@ -806,7 +1173,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
                       if (!e.target.value) delete newMapping[ch];
                       onUpdateState({ mapping: newMapping, feedback: null });
                     }}
-                    aria-label={`Map ciphertext letter ${ch} to plaintext`}
+                    aria-label={`Map ciphertext ${ch} to plaintext`}
                   >
                     <option value="">?</option>
                     {LETTER_LIST.map((opt) => (
@@ -818,6 +1185,47 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
             })}
           </div>
 
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+            <button
+              type="button"
+              className="practice-action-btn btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+              onClick={() => {
+                onUpdateState({
+                  mapping: {
+                    ...(taskState.mapping || {}),
+                    Z: "W",
+                    Q: "N",
+                    L: "I",
+                    V: "S",
+                    F: "C",
+                    D: "A",
+                  },
+                  feedback: null,
+                });
+              }}
+              disabled={isCompleted}
+              aria-label="Fill discovered anchor clues"
+            >
+              ⚡ Fill Investigated Anchors (Z→W, Q→N, L→I, V→S)
+            </button>
+            <button
+              type="button"
+              className="practice-action-btn btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+              onClick={() => {
+                onUpdateState({
+                  mapping: task.given?.providedClues ? { ...task.given.providedClues } : {},
+                  feedback: null,
+                });
+              }}
+              disabled={isCompleted}
+              aria-label="Reset mapper to initial clues"
+            >
+              ↺ Reset to Initial Clues
+            </button>
+          </div>
+
           <div className="candidate-live-box">
             <span className="candidate-preview-label">LIVE DECRYPTED PREVIEW:</span>
             <code className="candidate-live-code">{liveCandidate}</code>
@@ -825,9 +1233,10 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Revealed Hints Box */}
       {taskState.hintsUsed > 0 && (
         <div className="task-hint-box">
-          <div className="given-box-header">REVEALED HINTS</div>
+          <div className="given-box-header">REVEALED INTELLIGENCE HINTS</div>
           {task.hints.slice(0, taskState.hintsUsed).map((hint, idx) => (
             <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginTop: "4px" }}>
               <span className="task-workspace-points" style={{ color: "#d97706", borderColor: "rgba(217, 119, 6, 0.3)" }}>
@@ -839,6 +1248,7 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Verification Feedback: Error */}
       {taskState.feedback?.status === "error" && (
         <div className="task-feedback-box error" role="alert">
           <strong style={{ fontSize: "0.92rem" }}>✕ Verification Failed</strong>
@@ -846,6 +1256,23 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
         </div>
       )}
 
+      {/* Verification Feedback: Forensic Cryptanalytic Debrief */}
+      {isCompleted && (
+        <div className="case-debrief-card" role="region" aria-label="Cryptographic Debrief">
+          <div className="debrief-header">
+            <div className="debrief-header-left">
+              <span className="debrief-stamp">✓ VERIFIED</span>
+              <span className="debrief-title">CRYPTANALYTIC DEBRIEF</span>
+            </div>
+            <span className="debrief-points">+{taskState.pointsEarned} Points Awarded</span>
+          </div>
+          <div className="debrief-body">
+            <p className="debrief-text">{task.feedbackCorrect}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Workspace Action Buttons */}
       <div className="task-actions-row">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           {hintAvailable && (
@@ -853,63 +1280,97 @@ function TaskWorkspace({ task, taskState, onUpdateState, onVerify }) {
               type="button"
               className="practice-action-btn btn-secondary"
               onClick={handleHint}
-              aria-label={`Reveal hint ${taskState.hintsUsed + 1} of ${task.hints.length} (−${task.hints[taskState.hintsUsed]?.cost || 5} pts)`}
+              aria-label={`Reveal hint ${taskState.hintsUsed + 1} of ${task.hints.length} (−${task.hints[taskState.hintsUsed]?.cost || 3} pts)`}
             >
               💡 Hint {taskState.hintsUsed + 1}/{task.hints.length}
-              {" "}(−{task.hints[taskState.hintsUsed]?.cost || 5} pts)
+              {" "}(−{task.hints[taskState.hintsUsed]?.cost || 3} pts)
             </button>
           )}
+
+          {/* Reset Task Button */}
+          <button
+            type="button"
+            className="practice-action-btn btn-secondary"
+            onClick={() => onResetTask(task.id)}
+            title="Reset this task to clear input, restore available points to 100%, and retry."
+            aria-label="Reset task input and points"
+          >
+            ↺ Reset Task
+          </button>
+
           {taskState.hintsUsed > 0 && (
             <span style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>
-              Penalty: −{task.hints.slice(0, taskState.hintsUsed).reduce((s, h) => s + (h.cost || 5), 0)} pts
+              Penalty: −{task.hints.slice(0, taskState.hintsUsed).reduce((s, h) => s + (h.cost || 3), 0)} pts
             </span>
           )}
         </div>
-        {!isCompleted && (
-          <button
-            type="button"
-            className="practice-action-btn btn-start"
-            onClick={onVerify}
-            aria-label={`Verify answer for task ${task.id}`}
-          >
-            Verify Answer
-          </button>
-        )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {!isCompleted ? (
+            <button
+              type="button"
+              className="practice-action-btn btn-start"
+              onClick={onVerify}
+              aria-label={`Verify answer for task ${task.id}`}
+            >
+              Verify Answer
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="practice-action-btn btn-start"
+              onClick={onNextTask}
+              aria-label={isLastTask ? "View final laboratory results" : "Proceed to next task"}
+            >
+              {isLastTask ? "View Lab Results →" : "Next Task →"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// COMPONENT: Task Completion Overlay
+// COMPONENT: Task Completion Modal Overlay
 // ──────────────────────────────────────────────────────────────────────────────
-function TaskCompletionOverlay({ task, pointsEarned, totalScore, maxScore, onContinue }) {
+function TaskCompletionOverlay({
+  task,
+  taskIndex,
+  totalTasks,
+  pointsEarned,
+  totalScore,
+  maxScore,
+  onContinue,
+}) {
+  const isLast = taskIndex >= totalTasks - 1;
+
   return (
     <div className="task-completion-overlay" role="dialog" aria-modal="true" aria-label="Task Completed">
       <div className="task-completion-card">
         <div className="task-completion-icon">✓</div>
-        <div className="task-completion-header">TASK COMPLETED</div>
+        <div className="task-completion-header">TASK {task.id} SOLVED</div>
         <h3 className="task-completion-title">{task.title}</h3>
         <div className="task-completion-score-row">
           <div className="task-completion-score-item">
-            <span className="score-item-label">Points Earned</span>
+            <span className="score-item-label">Points Awarded</span>
             <strong className="score-item-val">+{pointsEarned}</strong>
           </div>
           <div className="task-completion-score-item">
-            <span className="score-item-label">Total Score</span>
+            <span className="score-item-label">Lab Score</span>
             <strong className="score-item-val">{totalScore} / {maxScore}</strong>
           </div>
         </div>
         <p className="task-completion-desc">
-          {task.feedbackCorrect || "Excellent work. You have completed this task successfully."}
+          {task.feedbackCorrect || "Outstanding work. You have mastered this cryptographic objective."}
         </p>
         <button
           type="button"
-          className="practice-action-btn btn-start"
+          className="practice-action-btn btn-start large"
           onClick={onContinue}
-          aria-label="Continue to next task"
+          aria-label={isLast ? "View final laboratory results" : "Continue to next task"}
         >
-          Continue →
+          {isLast ? "View Lab Results →" : "Continue to Next Task →"}
         </button>
       </div>
     </div>
@@ -922,57 +1383,74 @@ function TaskCompletionOverlay({ task, pointsEarned, totalScore, maxScore, onCon
 function LabResultScreen({ lab, taskStates, totalScore, onBack, onRetry, onReview }) {
   const perf = getPerformanceLabel(totalScore, lab.maxScore);
   const tasksCompleted = lab.tasks.filter((t) => taskStates[t.id]?.completed).length;
+  const isPerfect = totalScore === 100 && tasksCompleted === lab.tasks.length;
   const totalHints = Object.values(taskStates).reduce((acc, ts) => acc + (ts.hintsUsed || 0), 0);
 
   return (
     <div className="practice-lab-page">
       <div className="practice-screen-nav">
         <button type="button" className="practice-nav-back-btn" onClick={onBack}>
-          ← Back to Practice Lab
+          ← Return to Practice Labs
         </button>
         <div className="practice-nav-crumbs">
-          <span>Practice Lab</span> / <strong>Experiment {lab.number} — Result</strong>
+          <span>Practice Lab</span> / <strong>Lab {lab.number} — Final Assessment</strong>
         </div>
       </div>
 
       <div className="practice-result-card">
-        <div className="practice-exp-tag">EXPERIMENT ASSESSMENT COMPLETED</div>
+        <div className="practice-exp-tag">
+          {isPerfect ? "MISSION COMPLETED — FULL MASTERY EARNED" : "LABORATORY ATTEMPT EVALUATION"}
+        </div>
         <h2 className="practice-result-lab-title">
           LAB {lab.number}: {lab.title}
         </h2>
         <p className="practice-result-subtitle">
-          {perf === "Excellent" || perf === "Very Good"
-            ? "Outstanding performance. You have successfully demonstrated mastery of this experiment's cryptanalytic concepts."
-            : perf === "Good"
-            ? "Solid understanding demonstrated. Review individual task solutions to improve precision."
-            : "Experiment completed. Consider reviewing the corresponding theoretical concepts in the Learn module and retrying."}
+          {isPerfect
+            ? "Outstanding performance, Agent! You completed all tasks with a perfect 100/100 score. This lab is officially COMPLETED."
+            : "Lab completed. Note: To mark this lab as officially COMPLETED on your Academy dashboard, you must earn all 100 points without hint penalties."}
         </p>
 
         <div className="result-score-banner">
-          <span className="result-score-eyebrow">FINAL EVALUATED SCORE</span>
+          <span className="result-score-eyebrow">FINAL EVALUATED LAB SCORE</span>
           <div className="result-score-val">
-            {totalScore} <span>/ {lab.maxScore}</span>
+            {totalScore} <span>/ {lab.maxScore} PTS</span>
           </div>
-          <div className={`result-score-perf perf-${perf.toLowerCase().replace(/\s+/g, "")}`}>{perf}</div>
+          <div className={`result-score-perf ${isPerfect ? "perf-excellent" : "perf-good"}`}>
+            {perf}
+          </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div className="given-box-header">EXPERIMENT TASK BREAKDOWN</div>
+          <div className="given-box-header">TASK EVALUATION BREAKDOWN</div>
           <div className="breakdown-table">
             <div className="breakdown-row breakdown-header-row">
               <span style={{ minWidth: "80px" }}>Task</span>
               <span style={{ flex: 1 }}>Description</span>
-              <span style={{ minWidth: "90px", textAlign: "right" }}>Score</span>
+              <span style={{ minWidth: "100px", textAlign: "right" }}>Score Earned</span>
             </div>
             {lab.tasks.map((t) => {
               const ts = taskStates[t.id];
               const earned = ts?.pointsEarned || 0;
               return (
                 <div key={t.id} className="breakdown-row">
-                  <span style={{ minWidth: "80px", color: "var(--primary)", fontWeight: 600 }}>Task {t.id}</span>
+                  <span style={{ minWidth: "80px", color: "var(--primary)", fontWeight: 700 }}>
+                    Task {t.id}
+                  </span>
                   <span style={{ flex: 1, color: "var(--text-primary)" }}>{t.title}</span>
-                  <span style={{ minWidth: "90px", textAlign: "right", fontWeight: 700, color: earned === t.points ? "var(--success-mid)" : earned > 0 ? "var(--primary)" : "var(--text-tertiary)" }}>
-                    {earned} / {t.points}
+                  <span
+                    style={{
+                      minWidth: "100px",
+                      textAlign: "right",
+                      fontWeight: 800,
+                      color:
+                        earned === t.points
+                          ? "var(--success-mid)"
+                          : earned > 0
+                          ? "var(--primary)"
+                          : "var(--text-tertiary)",
+                    }}
+                  >
+                    {earned} / {t.points} Pts
                   </span>
                 </div>
               );
@@ -982,13 +1460,13 @@ function LabResultScreen({ lab, taskStates, totalScore, onBack, onRetry, onRevie
 
         <div className="result-meta-row">
           <div className="practice-stat-card" style={{ padding: "14px 18px" }}>
-            <span className="practice-stat-label">Tasks Completed</span>
+            <span className="practice-stat-label">Tasks Solved</span>
             <strong className="practice-stat-value" style={{ fontSize: "1.4rem" }}>
               {tasksCompleted} / {lab.tasks.length}
             </strong>
           </div>
           <div className="practice-stat-card" style={{ padding: "14px 18px" }}>
-            <span className="practice-stat-label">Total Hints Used</span>
+            <span className="practice-stat-label">Total Hints Consulted</span>
             <strong className="practice-stat-value" style={{ fontSize: "1.4rem" }}>
               {totalHints}
             </strong>
@@ -999,11 +1477,13 @@ function LabResultScreen({ lab, taskStates, totalScore, onBack, onRetry, onRevie
           <button type="button" className="practice-action-btn btn-secondary" onClick={onReview}>
             Review Tasks
           </button>
-          <button type="button" className="practice-action-btn btn-secondary" onClick={onRetry}>
-            ↺ Retry Experiment
-          </button>
+          {!isPerfect && (
+            <button type="button" className="practice-action-btn btn-resume" onClick={onRetry}>
+              ↺ Retry for 100 Pts
+            </button>
+          )}
           <button type="button" className="practice-action-btn btn-start" onClick={onBack}>
-            ← Return to Practice Lab
+            ← Return to Practice Labs
           </button>
         </div>
       </div>
@@ -1012,7 +1492,7 @@ function LabResultScreen({ lab, taskStates, totalScore, onBack, onRetry, onRevie
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// MAIN: PracticeLab
+// MAIN COMPONENT: PracticeLab
 // ──────────────────────────────────────────────────────────────────────────────
 export default function PracticeLab() {
   const [screen, setScreen] = useState("dashboard");
@@ -1020,12 +1500,14 @@ export default function PracticeLab() {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
 
+  // Persistence: Lab Progress
   const [labProgress, setLabProgress] = useState(() => {
     const saved = loadFromStorage();
     if (saved?.labProgress) return saved.labProgress;
     return buildInitialLabProgress(LABS);
   });
 
+  // Persistence: Task States for all labs
   const [allTaskStates, setAllTaskStates] = useState(() => {
     const saved = loadFromStorage();
     if (saved?.allTaskStates) return saved.allTaskStates;
@@ -1038,6 +1520,13 @@ export default function PracticeLab() {
 
   useEffect(() => {
     saveToStorage({ labProgress, allTaskStates });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cryptobreak-progress-updated", {
+          detail: { labProgress, allTaskStates },
+        })
+      );
+    }
   }, [labProgress, allTaskStates]);
 
   const currentLab = useMemo(() => LABS.find((l) => l.id === activeLab), [activeLab]);
@@ -1055,22 +1544,15 @@ export default function PracticeLab() {
     );
   }, [currentLab, taskStatesForLab]);
 
+  // Start a fresh lab
   const handleStartLab = useCallback((labId) => {
-    const lp = labProgress[labId];
-    if (lp?.status === "completed") {
-      if (!window.confirm("Reset this experiment? Your previous score will be replaced only if you complete it again with a higher score. Best score is preserved.")) {
-        return;
-      }
-      const lab = LABS.find((l) => l.id === labId);
-      const freshTasks = buildInitialTaskState(lab);
-      setAllTaskStates((prev) => ({ ...prev, [labId]: freshTasks }));
-    }
     setActiveLab(labId);
     setCurrentTaskIndex(0);
     setShowCompletionOverlay(false);
     setScreen("guidelines");
-  }, [labProgress]);
+  }, []);
 
+  // Resume an active lab
   const handleResumeLab = useCallback((labId, taskIdx) => {
     setActiveLab(labId);
     setCurrentTaskIndex(taskIdx);
@@ -1078,6 +1560,7 @@ export default function PracticeLab() {
     setScreen("tasks");
   }, []);
 
+  // Launch workspace from guidelines
   const handleStartExperiment = useCallback(() => {
     setScreen("tasks");
     setCurrentTaskIndex(0);
@@ -1087,6 +1570,7 @@ export default function PracticeLab() {
     }));
   }, [activeLab]);
 
+  // Update single task state
   const updateTaskState = useCallback((taskId, updates) => {
     setAllTaskStates((prev) => ({
       ...prev,
@@ -1097,58 +1581,120 @@ export default function PracticeLab() {
     }));
   }, [activeLab]);
 
+  // Reset a specific task so students can achieve 100%
+  const handleResetTask = useCallback((taskId) => {
+    if (!currentLab) return;
+    const task = currentLab.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    updateTaskState(taskId, {
+      completed: false,
+      pointsEarned: 0,
+      hintsUsed: 0,
+      availablePoints: task.points,
+      textInput: "",
+      numberInput: "",
+      selectedChoice: null,
+      selectedCandidateShift: null,
+      bruteForceRan: false,
+      multiSelected: [],
+      mappingHypothesisInput: "",
+      mapping: task.given?.providedClues ? { ...task.given.providedClues } : {},
+      freqMostFrequent: "",
+      feedback: null,
+    });
+  }, [currentLab, updateTaskState]);
+
+  // Verification engine delegated to src/crypto/*
   const handleVerify = useCallback(() => {
     if (!currentTask || !currentLab) return;
     const ts = taskStatesForLab[currentTask.id];
     if (!ts || ts.completed) return;
 
     let isCorrect = false;
-    let errorMsg;
+    let errorMsg = currentTask.feedbackIncorrect;
 
     try {
       switch (currentTask.expectedKey) {
+        // Caesar encrypt
         case "caesarEncrypt": {
           const expected = caesarEncrypt(currentTask.given.plaintext, currentTask.given.shift);
           isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Caesar decrypt
         case "caesarDecrypt": {
           const expected = caesarDecrypt(currentTask.given.ciphertext, currentTask.given.shift);
           isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Shift value
         case "shiftValue": {
           const entered = parseInt(ts.numberInput, 10);
           isCorrect = !isNaN(entered) && entered === currentTask.expectedValue;
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // General Number input
+        case "numberValue": {
+          const entered = parseInt(ts.numberInput, 10);
+          isCorrect = !isNaN(entered) && entered === currentTask.expectedValue;
+          break;
+        }
+
+        // General Text input
+        case "textValue": {
+          isCorrect = normalizeText(ts.textInput) === normalizeText(currentTask.expectedValue);
+          break;
+        }
+
+        // Single letter affine
+        case "singleLetterAffine": {
+          isCorrect = normalizeText(ts.textInput) === normalizeText(currentTask.expectedValue);
+          break;
+        }
+
+        // Modular Inverse
+        case "modInverseCalc": {
+          const entered = parseInt(ts.numberInput, 10);
+          const computedInv = modInverse(currentTask.given.a, currentTask.given.modulus || 26);
+          isCorrect = !isNaN(entered) && entered === computedInv;
+          break;
+        }
+
+        // Multiple choice
         case "multipleChoice": {
           isCorrect = ts.selectedChoice === currentTask.expectedValue;
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Brute force execution
         case "bruteForceRun": {
-          isCorrect = ts.bruteForceRan;
-          errorMsg = "Click 'Run Brute Force' to generate the candidate list.";
+          isCorrect = !!ts.bruteForceRan;
+          if (!isCorrect) {
+            errorMsg = "Click 'Run Exhaustive Brute-Force' to generate all 26 key candidates.";
+          }
           break;
         }
+
+        // Candidate select
         case "candidateSelect": {
           isCorrect = ts.selectedCandidateShift === currentTask.given.correctShift;
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Coprime keys selection
         case "validAffineKeys": {
-          const selected = [...(ts.multiSelected || [])].sort();
-          const expected = [...currentTask.expectedValues].sort();
+          const selected = [...(ts.multiSelected || [])].sort((a, b) => a - b);
+          const expected = [...currentTask.expectedValues].sort((a, b) => a - b);
           isCorrect =
             selected.length === expected.length &&
             selected.every((v, i) => v === expected[i]);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Affine encrypt
         case "affineEncrypt": {
           const expected = affineEncrypt(
             currentTask.given.plaintext,
@@ -1156,72 +1702,102 @@ export default function PracticeLab() {
             currentTask.given.b
           );
           isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
+
+        // Affine decrypt
+        case "affineDecrypt": {
+          const expected = affineDecrypt(
+            currentTask.given.ciphertext,
+            currentTask.given.a,
+            currentTask.given.b
+          );
+          isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
+          break;
+        }
+
+        // Caesar intermediate in product cipher
         case "caesarEncryptIntermediate": {
           const expected = getIntermediate(
             currentTask.given.plaintext,
             currentTask.given.caesarShift
           );
           isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
-        case "productDecrypt": {
-          const plaintext = currentTask.expectedPlaintext;
-          const cipher = productEncrypt(
-            plaintext,
-            currentTask.given.caesarShift,
+
+        // Product encrypt final
+        case "productEncryptFinal": {
+          const expected = affineEncrypt(
+            currentTask.given.intermediate,
             currentTask.given.affineA,
             currentTask.given.affineB
           );
-          const recovered = productDecrypt(
-            cipher,
-            currentTask.given.caesarShift,
+          isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
+          break;
+        }
+
+        // Product reverse step 1 (Affine)
+        case "productDecryptAffineStep": {
+          const expected = affineDecrypt(
+            currentTask.given.ciphertext,
             currentTask.given.affineA,
             currentTask.given.affineB
           );
-          isCorrect =
-            normalizeText(ts.textInput) === normalizeText(recovered) ||
-            normalizeText(ts.textInput) === normalizeText(plaintext);
-          errorMsg = currentTask.feedbackIncorrect;
+          isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
           break;
         }
+
+        // Product reverse step 2 (Caesar)
+        case "productDecryptCaesarStep": {
+          const expected = caesarDecrypt(
+            currentTask.given.intermediate,
+            currentTask.given.caesarShift
+          );
+          isCorrect = normalizeText(ts.textInput) === normalizeText(expected);
+          break;
+        }
+
+        // Frequency analysis: most frequent letter
         case "mostFrequentLetter": {
           isCorrect =
-            ts.freqMostFrequent === currentTask.given.expectedMostFrequent;
-          errorMsg = currentTask.feedbackIncorrect;
+            normalizeText(ts.freqMostFrequent) ===
+            normalizeText(currentTask.given.expectedMostFrequent);
           break;
         }
+
+        // Mapping hypothesis
         case "mappingHypothesis": {
           isCorrect =
-            ts.mappingHypothesisInput === currentTask.given.correctPlainLetter;
-          errorMsg = currentTask.feedbackIncorrect;
+            normalizeText(ts.mappingHypothesisInput) ===
+            normalizeText(currentTask.given.correctPlainLetter);
           break;
         }
+
+        // Mapping interactive
         case "mappingInteractive": {
+          const mappedValues = Object.values(ts.mapping || {}).filter(Boolean);
+          const uniqueMapped = new Set(mappedValues);
+          if (uniqueMapped.size < mappedValues.length) {
+            isCorrect = false;
+            errorMsg =
+              "One-to-one constraint violation: Multiple ciphertext letters are mapped to the same plaintext letter.";
+            break;
+          }
           const candidate = buildCandidate(
             currentTask.given.ciphertext,
             ts.mapping || {}
           );
           isCorrect =
             normalizeText(candidate) === normalizeText(currentTask.given.expectedAnswer);
-          errorMsg = currentTask.feedbackIncorrect;
           break;
         }
-        case "freqAnalysisPlaintext": {
-          isCorrect =
-            normalizeText(ts.textInput) ===
-            normalizeText(currentTask.given.expectedAnswer);
-          errorMsg = currentTask.feedbackIncorrect;
-          break;
-        }
+
         default:
-          errorMsg = "Validation not implemented for this task type.";
+          errorMsg = "Verification handler not defined.";
       }
     } catch (err) {
-      errorMsg = `Validation error: ${err.message}`;
+      errorMsg = `Forensic validation error: ${err.message}`;
     }
 
     if (isCorrect) {
@@ -1234,11 +1810,12 @@ export default function PracticeLab() {
       setShowCompletionOverlay(true);
     } else {
       updateTaskState(currentTask.id, {
-        feedback: { status: "error", message: errorMsg || "Incorrect. Please try again." },
+        feedback: { status: "error", message: errorMsg || "Incorrect. Please review and try again." },
       });
     }
   }, [currentTask, currentLab, taskStatesForLab, updateTaskState]);
 
+  // Continue to next task or results
   const handleContinue = useCallback(() => {
     setShowCompletionOverlay(false);
     const isLast = currentTaskIndex >= currentLab.tasks.length - 1;
@@ -1249,15 +1826,21 @@ export default function PracticeLab() {
           (acc, t) => acc + (newTaskStates?.[t.id]?.pointsEarned || 0),
           0
         );
+        const tasksCompletedCount = currentLab.tasks.filter(
+          (t) => newTaskStates?.[t.id]?.completed
+        ).length;
+        const isLabCompleted =
+          tasksCompletedCount === currentLab.tasks.length && finalScore === 100;
+
         setLabProgress((lprev) => {
           const prevBest = lprev[activeLab]?.bestScore || 0;
           return {
             ...lprev,
             [activeLab]: {
-              status: "completed",
+              status: isLabCompleted ? "completed" : "in-progress",
               bestScore: Math.max(prevBest, finalScore),
               lastScore: finalScore,
-              tasksCompleted: currentLab.tasks.length,
+              tasksCompleted: tasksCompletedCount,
               hintsUsed: currentLab.tasks.reduce(
                 (acc, t) => acc + (newTaskStates?.[t.id]?.hintsUsed || 0),
                 0
@@ -1273,15 +1856,15 @@ export default function PracticeLab() {
     }
   }, [currentTaskIndex, currentLab, activeLab]);
 
+  // Retry lab
   const handleRetry = useCallback(() => {
     if (!activeLab) return;
-    if (!window.confirm("Reset this experiment? Your best score is preserved if this attempt scores lower.")) return;
     const lab = LABS.find((l) => l.id === activeLab);
     const freshTasks = buildInitialTaskState(lab);
     setAllTaskStates((prev) => ({ ...prev, [activeLab]: freshTasks }));
     setCurrentTaskIndex(0);
     setShowCompletionOverlay(false);
-    setScreen("guidelines");
+    setScreen("tasks");
   }, [activeLab]);
 
   const handleBackToDashboard = () => {
@@ -1291,11 +1874,11 @@ export default function PracticeLab() {
     setShowCompletionOverlay(false);
   };
 
+  // Screen 1: Dashboard
   if (screen === "dashboard" || !activeLab) {
     return (
       <LabDashboard
         labs={LABS}
-        progress={labProgress}
         allTaskStates={allTaskStates}
         onStartLab={handleStartLab}
         onResumeLab={handleResumeLab}
@@ -1303,6 +1886,7 @@ export default function PracticeLab() {
     );
   }
 
+  // Screen 2: Guidelines
   if (screen === "guidelines" && currentLab) {
     return (
       <GuidelinesScreen
@@ -1313,6 +1897,7 @@ export default function PracticeLab() {
     );
   }
 
+  // Screen 3: Results
   if (screen === "result" && currentLab) {
     const finalScore = currentLab.tasks.reduce(
       (acc, t) => acc + (taskStatesForLab[t.id]?.pointsEarned || 0),
@@ -1333,35 +1918,47 @@ export default function PracticeLab() {
     );
   }
 
+  // Screen 4: Dedicated Task Workspace
   if (screen === "tasks" && currentLab && currentTask) {
     return (
       <div className="pl-task-screen practice-lab-page">
         <div className="practice-screen-nav">
           <button type="button" className="practice-nav-back-btn" onClick={handleBackToDashboard}>
-            ← Practice Lab
+            ← Return to Practice Labs
           </button>
           <div className="practice-nav-crumbs">
-            <span>Practice Lab</span> / <span>Experiment {currentLab.number}</span> / <strong>Task {currentTaskIndex + 1}</strong>
+            <span>Practice Lab</span> / <span>Lab {currentLab.number}: {currentLab.title}</span> /{" "}
+            <strong>Task {currentTaskIndex + 1} of {currentLab.tasks.length}</strong>
           </div>
         </div>
 
+        {/* Task Progress Header with Interactive Task Pills */}
         <TaskProgressHeader
           lab={currentLab}
           currentTaskIndex={currentTaskIndex}
           taskStates={taskStatesForLab}
           totalScore={totalScore}
+          onSelectTask={(idx) => setCurrentTaskIndex(idx)}
         />
 
+        {/* Dedicated Task Workspace */}
         <TaskWorkspace
           task={currentTask}
+          taskIndex={currentTaskIndex}
+          totalTasks={currentLab.tasks.length}
           taskState={taskStatesForLab[currentTask.id] || {}}
           onUpdateState={(updates) => updateTaskState(currentTask.id, updates)}
           onVerify={handleVerify}
+          onResetTask={handleResetTask}
+          onNextTask={handleContinue}
         />
 
+        {/* Modal Overlay after task verification */}
         {showCompletionOverlay && (
           <TaskCompletionOverlay
             task={currentTask}
+            taskIndex={currentTaskIndex}
+            totalTasks={currentLab.tasks.length}
             pointsEarned={taskStatesForLab[currentTask.id]?.pointsEarned || 0}
             totalScore={totalScore}
             maxScore={currentLab.maxScore}

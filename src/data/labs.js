@@ -1,10 +1,16 @@
 /**
- * Practice Lab — Laboratory Experiment Definitions
+ * Practice Lab — Realistic Case-Study Laboratory Definitions
  *
- * Five guided practical experiments for the CryptoBreak Lab virtual laboratory.
- * Each lab has guidelines, sequential tasks, scoring, and hints.
+ * Combines hands-on cryptography experiments with realistic scenario-based case studies:
+ * Lab 1 — Caesar Cipher Investigation: Historical Message Interception
+ * Lab 2 — Affine Cipher Workshop: Incorrectly Configured Encryption
+ * Lab 3 — Product Cipher Laboratory: Transformation Pipeline Failure
+ * Lab 4 — Substitution & Frequency Analysis: Investigating a Leaked Message
+ * Lab 5 — Cryptanalysis Mission: Choose the Right Attack
  *
- * Crypto answers are validated against the actual crypto engines, not hard-coded strings.
+ * Open Access: All 5 labs accessible immediately in any order.
+ * Each lab contains 6–7 case-study investigation tasks totaling exactly 100 points (500 pts total).
+ * All ciphers use real deterministic math validated against src/crypto/* engines.
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -21,644 +27,1176 @@ export function normalizeText(str) {
 
 export const LABS = [
   // ════════════════════════════════════════════════════════════════
-  // LAB 01 — CAESAR CIPHER FUNDAMENTALS
+  // LAB 01 — CAESAR CIPHER: HISTORICAL MESSAGE INTERCEPTION
   // ════════════════════════════════════════════════════════════════
   {
     id: 1,
     number: "01",
-    title: "Caesar Cipher Fundamentals",
+    title: "Caesar Cipher Investigation: Historical Message Interception",
     topic: "Caesar Cipher",
-    category: "FOUNDATION",
+    category: "CASE STUDY // FIELD INTERCEPTION",
     shortDescription:
-      "Practice Caesar encryption, decryption, key identification, and basic security analysis.",
-    difficulty: "Beginner",
-    estimatedTime: "~5 minutes",
+      "Intercept an operational military dispatch, execute an automated brute-force attack, isolate candidate streams, and reconstruct tactical intelligence.",
+    difficulty: "Beginner–Intermediate",
+    estimatedTime: "~8 minutes",
     maxScore: 100,
     objective:
-      "Learn to encrypt and decrypt messages using the Caesar Cipher and understand its limited key space through direct application.",
+      "Investigate an intercepted tactical dispatch, determine the secret shift key using brute-force analysis, recover the verified plaintext, and debrief on keyspace vulnerability.",
     guidelines: {
       whatYouWillDo: [
-        "Encrypt a plaintext message using a given Caesar shift.",
-        "Decrypt a ciphertext message using a known shift value.",
-        "Identify the correct shift from a known plaintext/ciphertext pair.",
-        "Analyse why Caesar is vulnerable to exhaustive brute-force attack.",
+        "Examine an intercepted tactical radio transmission and its transmission metadata.",
+        "Launch an exhaustive brute-force search engine across all 26 possible shift keys.",
+        "Identify the correct shift key and linguistically justify the selection against decoy candidates.",
+        "Recover the complete operational plaintext instructions.",
+        "Algorithmic verification of the Caesar decryption transformation.",
+        "Debrief on the structural keyspace vulnerabilities of monoalphabetic shift ciphers.",
       ],
       whatYouNeedToKnow: [
-        "Caesar shifts every letter by a fixed amount K (0–25).",
-        "The alphabet wraps around: Z shifted by 1 becomes A.",
-        "Encryption: C = (P + K) mod 26",
-        "Decryption: P = (C − K + 26) mod 26",
-        "There are exactly 26 possible keys (shifts), making exhaustive search trivial.",
+        "Caesar ciphers shift each letter uniformly by key K (0–25) modulo 26.",
+        "Spaces, digits, and punctuation characters are preserved unchanged.",
+        "The total keyspace is only 26 keys, making exhaustive search computationally trivial in O(1) time.",
       ],
       instructions: [
-        "Complete every task in order — tasks unlock sequentially.",
-        "Each task must be verified before advancing to the next.",
-        "Points are awarded only when an answer is verified as correct.",
-        "Incorrect attempts do not end the experiment — you may retry.",
-        "Hints reduce the maximum points available for that task.",
-        "Complete all 4 tasks to receive the final experiment score.",
+        "All five labs are open and accessible immediately in any order.",
+        "Interact with the evidence panel in each task to deduce the required findings.",
+        "Earn all 100 points to complete this case study.",
       ],
     },
     tasks: [
       {
         id: 1,
-        title: "Encrypt the Message",
+        title: "Examine Intercepted Evidence & Ciphertext Record",
         description:
-          "Using the Caesar Cipher with the provided shift, encrypt the plaintext message below.",
-        points: 20,
-        type: "text-answer",
-        given: { plaintext: "HELLO WORLD", shift: 3 },
-        expectedKey: "caesarEncrypt",
-        hints: [
-          { text: "Shift each letter forward by 3. H → K, E → H, L → O, L → O, O → R.", cost: 5 },
-          { text: "Expected result: KHOOR ZRUOG. Spaces are preserved unchanged.", cost: 5 },
-        ],
-        feedbackCorrect: "Correct. HELLO WORLD encrypted with shift 3 produces KHOOR ZRUOG.",
-        feedbackIncorrect:
-          "Incorrect. Apply C = (P + K) mod 26 to each letter. Verify each letter individually.",
-      },
-      {
-        id: 2,
-        title: "Decrypt the Ciphertext",
-        description:
-          "The following ciphertext was encrypted with Caesar shift K = 3. Recover the original plaintext.",
-        points: 25,
-        type: "text-answer",
-        given: { ciphertext: "DWWDFN DW GDZQ", shift: 3 },
-        expectedKey: "caesarDecrypt",
-        hints: [
-          { text: "Subtract the shift from each letter. D → A (D is index 3, 3−3 = 0 = A).", cost: 5 },
-          { text: "The plaintext is a military command: ATTACK AT DAWN.", cost: 5 },
-        ],
-        feedbackCorrect: "Correct. DWWDFN DW GDZQ decrypts with shift 3 to ATTACK AT DAWN.",
-        feedbackIncorrect:
-          "Incorrect. Use P = (C − K + 26) mod 26 to shift each letter backward by 3.",
-      },
-      {
-        id: 3,
-        title: "Identify the Shift",
-        description:
-          "You have been given a plaintext and its Caesar-encrypted ciphertext. Determine the shift value K that was used.",
-        points: 25,
+          "Signals intelligence intercepted a tactical dispatch on a military frequency. Punctuation, digits ('0600'), and colons remain intact. Notice the opening word 'WKLV'. Compare this word with the common English military opening 'THIS'. Deduce the candidate shift key K.",
+        points: 15,
         type: "number-answer",
-        given: { plaintext: "HELLO", ciphertext: "KHOOR" },
+        caseId: "CASE-C01 // STEP 1",
+        scenario:
+          "At 04:32Z, an outpost listening station intercepted an encrypted radio transmission on VHF Band 3. Preliminary SIGINT reports suggest a classical Caesar shift cipher was used to encode tactical movement orders.",
+        objective:
+          "Inspect the intercepted evidence record and calculate the candidate shift key K using crib alignment on the opening word.",
+        evidence: {
+          transmissionId: "INTEL-SIGINT-014",
+          interceptSource: "VHF Military Channel 4 (04:32Z)",
+          interceptedCiphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+          cribAnalysis: "Ciphertext 'WKLV' matches candidate English opening 'THIS'.",
+        },
+        given: {
+          ciphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+        },
         expectedKey: "shiftValue",
         expectedValue: 3,
         hints: [
-          { text: "Compare the first letter pair: H → K. Count how many positions forward K is from H.", cost: 5 },
-          { text: "H is index 7, K is index 10. The shift is 10 − 7 = 3.", cost: 5 },
+          { text: "Compare letter indices: W is index 22, T is index 19. (22 - 19) = 3.", cost: 3 },
+          { text: "Verify: K(10) - 3 = 7 ('H'), L(11) - 3 = 8 ('I'), V(21) - 3 = 18 ('S'). The shift is K = 3.", cost: 4 },
         ],
-        feedbackCorrect: "Correct. The shift K = 3 maps H → K, E → H, L → O, L → O, O → R.",
+        feedbackCorrect:
+          "Evidence verified! Ciphertext word 'WKLV' aligns with 'THIS' under shift K = 3 (W:22 - 3 = T:19).",
         feedbackIncorrect:
-          "Incorrect. Compare any plaintext letter with its ciphertext counterpart: cipher_idx − plain_idx = K.",
+          "Incorrect shift key. Calculate the offset: Index(W) - Index(T) = 22 - 19 = 3.",
+      },
+      {
+        id: 2,
+        title: "Execute Exhaustive Brute-Force Attack",
+        description:
+          "To eliminate any possibility of coincidence, deploy the automated brute-force attack engine to compute all 26 possible shift candidates for the intercepted dispatch.",
+        points: 15,
+        type: "brute-force-action",
+        caseId: "CASE-C01 // STEP 2",
+        scenario:
+          "Standard operating procedure requires evaluating all candidate shifts to verify that no alternative English decryptions exist.",
+        objective:
+          "Run the automated brute-force decryption engine and inspect the resulting candidate plaintexts.",
+        evidence: {
+          attackMethod: "Exhaustive Key Search",
+          searchSpaceSize: "26 Keys (K = 00 through 25)",
+        },
+        given: {
+          ciphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+        },
+        expectedKey: "bruteForceRun",
+        hints: [
+          { text: "Click 'Run Exhaustive Brute-Force Engine' to generate and index all 26 candidate streams.", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Brute-force telemetry generated! All 26 candidate outputs are indexed below for forensic inspection.",
+        feedbackIncorrect:
+          "Click 'Run Exhaustive Brute-Force Engine' to compute the candidate outputs.",
+      },
+      {
+        id: 3,
+        title: "Identify Correct Shift & Linguistic Justification",
+        description:
+          "From the 26 computed candidate streams, select the row containing intelligible, coherent English military instructions and confirm shift K = 3.",
+        points: 15,
+        type: "candidate-select",
+        caseId: "CASE-C01 // STEP 3",
+        scenario:
+          "The analyst must isolate the true signal from the 25 noise streams and confirm the shift key based on natural language syntax.",
+        objective:
+          "Select the valid English candidate stream corresponding to shift K = 3.",
+        evidence: {
+          targetCiphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+          keySelectionCriteria: "Syntactically valid military instructions with English n-gram frequencies.",
+        },
+        given: {
+          ciphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+          correctShift: 3,
+        },
+        expectedKey: "candidateSelect",
+        hints: [
+          { text: "Scan candidate list for K = 03. W(22)-3=T, K(10)-3=H, L(11)-3=I, V(21)-3=S → 'THIS IS AN OPERATIONAL...'.", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Key confirmed! Candidate K = 03 reveals the coherent operational military order.",
+        feedbackIncorrect:
+          "Incorrect candidate. Scan the generated candidate list for the readable English stream at K = 03.",
       },
       {
         id: 4,
-        title: "Conceptual Analysis",
+        title: "Recover Complete Operational Plaintext",
         description:
-          "Select the statement that best explains why brute-force attack is practical against the Caesar Cipher.",
-        points: 30,
-        type: "multiple-choice",
-        options: [
-          "The Caesar Cipher uses a complex permutation that requires statistical analysis to break.",
-          "There are only 26 possible shift values, so every key can be tested in microseconds.",
-          "The Caesar Cipher has a key space of 26! permutations, which is too large to enumerate.",
-          "Brute force is impractical for Caesar — frequency analysis is always required.",
-        ],
-        expectedKey: "multipleChoice",
-        expectedValue: 1,
+          "Enter the complete decrypted English plaintext recovered from candidate K = 3 to record the operational intelligence.",
+        points: 20,
+        type: "text-answer",
+        caseId: "CASE-C01 // STEP 4",
+        scenario:
+          "The field command center requires the exact plaintext of the intercepted orders for threat assessment.",
+        objective:
+          "Transcribe and verify the complete recovered plaintext dispatch.",
+        evidence: {
+          selectedShift: "K = 3",
+          expectedLength: "107 characters (including punctuation and numeric time)",
+        },
+        given: {
+          ciphertext:
+            "WKLV LV DQ RSHUDWLRQDO GLVSDWFK: DOO XQLWV PXVW ZLWKGUDZ WR WKH VHFRQGDUB FRQWDLQPHQW OLQH DW 0600 KRXUV.",
+          shift: 3,
+        },
+        expectedKey: "caesarDecrypt",
         hints: [
-          { text: "Consider how many distinct shift values exist between 0 and 25.", cost: 5 },
-          { text: "Compare 26 keys (Caesar) with 26! keys (general substitution): which is exhaustable?", cost: 5 },
+          { text: "Decrypt each letter with P = (C - 3 + 26) mod 26. Maintain punctuation and '0600 HOURS.'.", cost: 4 },
+          { text: "Plaintext: 'THIS IS AN OPERATIONAL DISPATCH: ALL UNITS MUST WITHDRAW TO THE SECONDARY CONTAINMENT LINE AT 0600 HOURS.'", cost: 5 },
         ],
         feedbackCorrect:
-          "Correct. Caesar has only 26 possible keys. A computer can test all 26 shifts in less than a millisecond, making exhaustive brute-force search completely trivial.",
+          "Plaintext successfully recovered! 'THIS IS AN OPERATIONAL DISPATCH: ALL UNITS MUST WITHDRAW TO THE SECONDARY CONTAINMENT LINE AT 0600 HOURS.'.",
         feedbackIncorrect:
-          "Incorrect. Consider how many distinct shift values exist and compare that to the general substitution cipher key space.",
+          "Incorrect plaintext. Enter: 'THIS IS AN OPERATIONAL DISPATCH: ALL UNITS MUST WITHDRAW TO THE SECONDARY CONTAINMENT LINE AT 0600 HOURS.'.",
+      },
+      {
+        id: 5,
+        title: "Algorithmic Decryption Verification",
+        description:
+          "How does the formal Caesar decryption function algorithmically reverse the encryption process to guarantee faithful recovery?",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-C01 // STEP 5",
+        scenario:
+          "The intelligence unit conducts an audit of the automated decryption tool to confirm mathematical soundness.",
+        objective:
+          "Identify the correct algebraic inverse formula that restores plaintext P from ciphertext C.",
+        options: [
+          "P = (C − K + 26) mod 26; adding 26 prevents negative modular residues in standard modular arithmetic",
+          "P = (C + K) mod 26; decryption repeats the forward shift until the message wraps around",
+          "P = (C × K) mod 26; modular multiplication inverts addition",
+          "P = (C − 13) mod 26; all classical ciphers invert using ROT13",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Decryption subtracts the key K. Adding 26 ensures the operand is non-negative before modulo 26.", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Algorithmic verification confirmed! P = (C − K + 26) mod 26 correctly computes the additive modular inverse.",
+        feedbackIncorrect:
+          "Incorrect formula. Decryption subtracts K: P = (C − K + 26) mod 26.",
+      },
+      {
+        id: 6,
+        title: "Vulnerability Debrief: Exhaustive Search Feasibility",
+        description:
+          "Complete the case debrief: Why is the Caesar cipher categorically insecure against adversary interception in operational environments?",
+        points: 20,
+        type: "multiple-choice",
+        caseId: "CASE-C01 // DEBRIEF",
+        scenario:
+          "Submit your final case debrief to the cryptographic oversight committee summarizing the fatal vulnerability of the Caesar cipher.",
+        objective:
+          "Explain why small keyspaces make ciphers completely vulnerable to exhaustive search attacks.",
+        options: [
+          "With only 26 possible keys, an adversary can exhaust the entire keyspace in under a millisecond, rendering secrecy completely dependent on security-through-obscurity",
+          "Caesar ciphers can only encrypt short words under 10 letters",
+          "Caesar ciphers produce corrupted characters whenever numbers are transmitted",
+          "The cipher requires internet connectivity to transmit key schedules",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Kerckhoffs's Principle: Security must reside solely in the key. When the keyspace is only 26, brute force is trivial.", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Case Study 1 Debrief Complete! The 26-key search space violates Kerckhoffs's principle, allowing trivial exhaustive search. Outstanding investigation!",
+        feedbackIncorrect:
+          "Incorrect debrief. The fatal flaw is the minute 26-key search space, allowing instantaneous brute force.",
       },
     ],
   },
 
   // ════════════════════════════════════════════════════════════════
-  // LAB 02 — CAESAR BRUTE-FORCE INVESTIGATION
+  // LAB 02 — AFFINE CIPHER: INCORRECTLY CONFIGURED ENCRYPTION
   // ════════════════════════════════════════════════════════════════
   {
     id: 2,
     number: "02",
-    title: "Caesar Brute-Force Investigation",
-    topic: "Brute-Force Cryptanalysis",
-    category: "CRYPTANALYSIS",
+    title: "Affine Cipher Workshop: Incorrectly Configured Encryption",
+    topic: "Affine Cipher",
+    category: "CASE STUDY // CONFIGURATION AUDIT",
     shortDescription:
-      "Investigate an unknown Caesar shift using exhaustive brute-force search.",
+      "Audit a security trainee's flawed Affine configuration, diagnose fatal collision defects, derive modular inverses, and recover the compromised transmission.",
     difficulty: "Intermediate",
-    estimatedTime: "~8 minutes",
+    estimatedTime: "~10 minutes",
     maxScore: 100,
     objective:
-      "Use exhaustive search to recover an unknown Caesar shift and understand the mechanics of brute-force cryptanalysis.",
+      "Diagnose an invalid Affine multiplier key, demonstrate irreversible letter collisions, calculate modular inverses with the Euclidean algorithm, and recover the secure message with the corrected configuration.",
     guidelines: {
       whatYouWillDo: [
-        "Examine an intercepted Caesar ciphertext with an unknown shift.",
-        "Generate all 26 candidate decryptions by simulating brute force.",
-        "Identify the meaningful English plaintext among the candidates.",
-        "Identify the shift key that produced the correct decryption.",
-        "Reason about what makes brute force feasible for Caesar.",
+        "Audit a trainee's Affine key configuration record containing multiplier a = 4, shift b = 7.",
+        "Calculate gcd(4, 26) to demonstrate why the multiplier key fails invertibility.",
+        "Compute the modular multiplicative inverse for the corrected key a = 9 modulo 26.",
+        "Diagnose the mathematical collision defect where distinct plaintext letters map to identical ciphertext letters.",
+        "Decrypt the intercepted transmission 'NRZFEBWP' using the validated key configuration.",
+        "Verify the recovered plaintext and deliver the mathematical bijectivity debrief.",
       ],
       whatYouNeedToKnow: [
-        "Brute force exhaustively tests every key in the key space.",
-        "Caesar has exactly 26 keys (shifts 0–25), making exhaustive search trivial.",
-        "Only one shift will produce recognisable English plaintext.",
-        "A fitness function (language score) identifies the correct candidate.",
-        "For 26! monoalphabetic keys, brute force is computationally infeasible.",
+        "Affine encryption formula: E(x) = (ax + b) mod 26.",
+        "Affine decryption formula: D(y) = a⁻¹(y − b) mod 26.",
+        "A multiplier key 'a' is invertible if and only if gcd(a, 26) = 1. If gcd(a, 26) > 1, the mapping collapses and loses information.",
       ],
       instructions: [
-        "Complete every task in order — tasks unlock sequentially.",
-        "In Task 1, run the brute force simulation to reveal all 26 candidates.",
-        "In Task 2, select the meaningful plaintext from the candidate list.",
-        "In Task 3, enter the shift value that corresponds to your selection.",
-        "In Task 4, answer the conceptual question about feasibility.",
-        "Hints reduce available points for that task.",
+        "Follow the audit steps sequentially.",
+        "Use modular arithmetic over the English alphabet (A = 0, ..., Z = 25).",
+        "Earn all 100 points to complete this case study.",
       ],
     },
     tasks: [
       {
         id: 1,
-        title: "Run Brute-Force Search",
+        title: "Inspect Supplied Key Configuration Record",
         description:
-          "Below is an intercepted Caesar ciphertext. Click 'Run Brute Force' to generate all 26 candidate decryptions.",
-        points: 20,
-        type: "brute-force-action",
-        given: { ciphertext: "KHOOR ZRUOG" },
-        expectedKey: "bruteForceRun",
+          "A trainee's configuration file reads: 'KEY_CONFIG: a = 4, b = 7'. Calculate gcd(4, 26) to determine whether the multiplication key satisfies invertibility requirements.",
+        points: 15,
+        type: "number-answer",
+        caseId: "CASE-A02 // STEP 1",
+        scenario:
+          "During an internal security review, an automated monitor flagged an Affine encryption deployment. The trainee reported that certain messages could not be decrypted after transmission.",
+        objective:
+          "Compute the greatest common divisor gcd(4, 26) of the configured multiplier key.",
+        evidence: {
+          auditTarget: "Trainee Script: secure_channel_v1.cfg",
+          configuredMultiplier: "a = 4",
+          configuredShift: "b = 7",
+          alphabetModulus: "m = 26",
+        },
+        given: { a: 4, modulus: 26 },
+        expectedKey: "numberValue",
+        expectedValue: 2,
         hints: [
-          { text: "Brute force simply tests every shift from 0 to 25 and shows all decryptions.", cost: 5 },
-          { text: "The correct decryption will be the only one that reads as recognisable English.", cost: 5 },
+          { text: "Find the greatest common factor between 4 and 26. Both are divisible by 2.", cost: 3 },
+          { text: "gcd(4, 26) = 2. Enter 2.", cost: 4 },
         ],
         feedbackCorrect:
-          "Brute-force search complete. All 26 candidate decryptions are displayed. Inspect them to identify the English plaintext.",
-        feedbackIncorrect: "",
+          "Audit verified! gcd(4, 26) = 2. Because gcd(a, 26) ≠ 1, the key is mathematically invalid and non-invertible.",
+        feedbackIncorrect:
+          "Incorrect GCD. 4 = 2 × 2 and 26 = 2 × 13. Their greatest common divisor is 2.",
       },
       {
         id: 2,
-        title: "Identify the Plaintext",
+        title: "Determine Multiplier Key Coprimality",
         description:
-          "Review the 26 candidate decryptions generated in Task 1. Select the candidate that represents meaningful English plaintext.",
-        points: 25,
-        type: "candidate-select",
-        given: { ciphertext: "KHOOR ZRUOG", correctShift: 3 },
-        expectedKey: "candidateSelect",
+          "To fix the trainee's configuration, inspect replacement candidate keys a ∈ {4, 9, 13, 17, 20, 25}. Select all values that satisfy gcd(a, 26) = 1.",
+        points: 15,
+        type: "multi-select",
+        caseId: "CASE-A02 // STEP 2",
+        scenario:
+          "The trainee needs a replacement key coprime to 26 so the encryption function remains bijective and reversible.",
+        objective:
+          "Filter and select all candidate multiplier keys that are coprime to 26.",
+        evidence: {
+          candidatePool: "a ∈ {4, 9, 13, 17, 20, 25}",
+          coprimalityCondition: "gcd(a, 26) == 1",
+        },
+        options: [
+          { value: 4, label: "a = 4 (gcd = 2)" },
+          { value: 9, label: "a = 9 (gcd = 1)" },
+          { value: 13, label: "a = 13 (gcd = 13)" },
+          { value: 17, label: "a = 17 (gcd = 1)" },
+          { value: 20, label: "a = 20 (gcd = 2)" },
+          { value: 25, label: "a = 25 (gcd = 1)" },
+        ],
+        expectedKey: "validAffineKeys",
+        expectedValues: [9, 17, 25],
         hints: [
-          { text: "Look for recognisable English words rather than random letter sequences.", cost: 5 },
-          { text: "The plaintext is a common English phrase: HELLO WORLD.", cost: 5 },
+          { text: "Discard even numbers (4, 20) and multiples of 13 (13).", cost: 3 },
+          { text: "The valid coprime values are 9, 17, and 25.", cost: 4 },
         ],
         feedbackCorrect:
-          "Correct. HELLO WORLD (shift 3) is the only candidate that produces recognisable English text.",
+          "Candidate pool validated! Keys a = 9, 17, and 25 satisfy gcd(a, 26) = 1 and can be inverted modulo 26.",
         feedbackIncorrect:
-          "Incorrect. Review the candidates again and select the one that reads as valid English.",
+          "Incorrect selection. Only select keys where gcd(a, 26) = 1 (values 9, 17, and 25).",
       },
       {
         id: 3,
-        title: "Identify the Key",
+        title: "Calculate Modular Multiplicative Inverse",
         description:
-          "Enter the Caesar shift value (K) that decrypted the ciphertext to produce the correct plaintext.",
-        points: 25,
+          "The trainee chooses replacement key a = 9. Calculate its modular multiplicative inverse a⁻¹ modulo 26 such that (9 · a⁻¹) ≡ 1 (mod 26).",
+        points: 15,
         type: "number-answer",
-        given: { ciphertext: "KHOOR ZRUOG", plaintext: "HELLO WORLD" },
-        expectedKey: "shiftValue",
+        caseId: "CASE-A02 // STEP 3",
+        scenario:
+          "To prepare the decryption script, the trainee must compute the modular multiplicative inverse of the replacement key a = 9.",
+        objective:
+          "Calculate an integer x (1–25) satisfying (9 × x) mod 26 = 1.",
+        evidence: {
+          selectedKey: "a = 9",
+          modulus: "m = 26",
+          inverseEquation: "(9 × a⁻¹) ≡ 1 (mod 26)",
+        },
+        given: { a: 9, modulus: 26 },
+        expectedKey: "modInverseCalc",
         expectedValue: 3,
         hints: [
-          { text: "The shift is the value you selected from the candidate list in Task 2.", cost: 5 },
-          { text: "Compare K → H: K is index 10, H is index 7. The shift used was 10 − 7 = 3.", cost: 5 },
+          { text: "Test small multiples: 9 × 1 = 9; 9 × 2 = 18; 9 × 3 = 27.", cost: 3 },
+          { text: "Notice 27 = 26 + 1 ≡ 1 (mod 26). Therefore 9⁻¹ mod 26 = 3. Enter 3.", cost: 4 },
         ],
         feedbackCorrect:
-          "Correct. Shift K = 3 decrypts KHOOR ZRUOG → HELLO WORLD.",
+          "Modular inverse confirmed! 9⁻¹ mod 26 = 3 because 9 × 3 = 27 ≡ 1 (mod 26).",
         feedbackIncorrect:
-          "Incorrect. The shift key is the number of positions the ciphertext letters are ahead of the plaintext letters.",
+          "Incorrect inverse. Calculate x where (9 × x) mod 26 = 1. Notice 9 × 3 = 27 = 1 mod 26.",
       },
       {
         id: 4,
-        title: "Cryptanalysis Conclusion",
+        title: "Diagnose Collision Failure on Invalid Configuration",
         description:
-          "Select the most accurate explanation for why brute-force attack is computationally feasible against Caesar ciphers.",
-        points: 30,
+          "Demonstrate the mathematical failure of the original key a = 4, b = 7: Under E(x) = (4x + 7) mod 26, plaintext 'A' (x=0) gives E(0) = 7 ('H'), and 'N' (x=13) gives E(13) = (52+7) mod 26 = 7 ('H'). Diagnose why this breaks decryption.",
+        points: 20,
         type: "multiple-choice",
+        caseId: "CASE-A02 // STEP 4",
+        scenario:
+          "The trainee needs an explanation of why an invalid key produces unrecoverable errors.",
+        objective:
+          "Identify the algebraic reason why gcd(a, 26) > 1 causes irreversible information loss.",
         options: [
-          "Caesar ciphers use a polyalphabetic key structure that can be reversed analytically.",
-          "Modern computers can test arbitrary cipher depths in constant time.",
-          "The key space contains only 26 possible shifts, so all keys are exhausted instantly.",
-          "Caesar ciphers always produce ciphertext with recognisable letter frequencies.",
+          "Because gcd(4, 26) = 2, the function is non-injective (many-to-one), collapsing the 26-letter alphabet into only 13 outputs; distinct letters collide into identical ciphertext letters, making unique decryption impossible",
+          "Because 4 is smaller than 7, modular operations create negative outputs",
+          "Because vowels and consonants cannot share the same affine transformation",
+          "Because the Affine cipher requires b to be prime",
         ],
         expectedKey: "multipleChoice",
-        expectedValue: 2,
+        expectedValue: 0,
         hints: [
-          { text: "Focus on the size of the key space — how many distinct keys exist?", cost: 5 },
-          { text: "26 keys at even 1 key/second = 26 seconds. At 10⁹ keys/second it is instantaneous.", cost: 5 },
+          { text: "Both 'A' and 'N' produce 'H'. When the receiver sees 'H', there is no mathematical way to know whether it was 'A' or 'N'.", cost: 4 },
         ],
         feedbackCorrect:
-          "Correct. Caesar's key space of 26 shifts is so small that all candidates are exhausted in microseconds on modern hardware.",
+          "Defect diagnosed! When gcd(a, 26) > 1, the mapping is non-injective (many-to-one). Collisions permanently destroy plaintext data.",
         feedbackIncorrect:
-          "Incorrect. Consider specifically how many distinct key values exist for the Caesar Cipher.",
+          "Incorrect diagnosis. The failure is due to non-injectivity: gcd(4, 26) = 2 collapses the alphabet into 13 values, causing fatal collisions.",
+      },
+      {
+        id: 5,
+        title: "Decrypt Message with Valid Key Configuration",
+        description:
+          "The trainee re-encrypted the transmission using the valid key pair a = 9 and b = 7, producing ciphertext 'NRZFEBWP'. Using a⁻¹ = 3, decrypt the message with D(y) = 3(y − 7) mod 26.",
+        points: 20,
+        type: "text-answer",
+        caseId: "CASE-A02 // STEP 5",
+        scenario:
+          "With the corrected key pair (a = 9, b = 7), recover the sensitive transmission sent by the trainee.",
+        objective:
+          "Apply the Affine decryption function D(y) = 3(y − 7) mod 26 to 'NRZFEBWP'.",
+        evidence: {
+          correctedCiphertext: "NRZFEBWP",
+          validatedKey: "a = 9, b = 7",
+          modularInverse: "a⁻¹ = 3",
+          decryptionFormula: "D(y) = 3 · (y − 7) mod 26",
+        },
+        given: {
+          ciphertext: "NRZFEBWP",
+          a: 9,
+          b: 7,
+          a_inv: 3,
+        },
+        expectedKey: "affineDecrypt",
+        hints: [
+          { text: "For letter N (13): 13 - 7 = 6; (3 × 6) mod 26 = 18 ('S').", cost: 4 },
+          { text: "For letter R (17): 17 - 7 = 10; (3 × 10) mod 26 = 30 mod 26 = 4 ('E'). Plaintext begins with 'SE...'.", cost: 5 },
+        ],
+        feedbackCorrect:
+          "Decryption verified! 'NRZFEBWP' decrypted with key pair (a=9, b=7) recovers the operational keyword: 'SECURITY'.",
+        feedbackIncorrect:
+          "Incorrect plaintext. Apply D(y) = 3(y − 7) mod 26 to 'NRZFEBWP'. Expected: 'SECURITY'.",
+      },
+      {
+        id: 6,
+        title: "Plaintext Verification & Mathematical Debrief",
+        description:
+          "Which algebraic proof demonstrates why the round-trip decryption identity D(E(x)) = x mod 26 holds for every letter x when gcd(a, 26) = 1?",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-A02 // DEBRIEF",
+        scenario:
+          "Document the formal proof for the trainee's training record to prevent future configuration errors.",
+        objective:
+          "Select the correct algebraic identity confirming round-trip bijectivity.",
+        options: [
+          "D(E(x)) = a⁻¹((ax + b) − b) ≡ a⁻¹(ax) ≡ (a⁻¹a)x ≡ 1 · x = x (mod 26)",
+          "D(E(x)) = (ax + b) + (a⁻¹x − b) ≡ 2ax mod 26",
+          "D(E(x)) = (ax · a⁻¹x) + (b − b) ≡ x² mod 26",
+          "D(E(x)) = (a + a⁻¹) · (b − b) ≡ 26x mod 26",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Substitute E(x) into D(y): D(E(x)) = a⁻¹(E(x) - b) = a⁻¹((ax + b) - b). The b terms cancel, leaving (a⁻¹a)x = 1·x = x mod 26.", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Case Study 2 Complete! You diagnosed the collision flaw, derived modular inverses, and proved round-trip bijectivity. Excellent cryptanalytic audit!",
+        feedbackIncorrect:
+          "Incorrect proof. D(E(x)) = a⁻¹((ax + b) − b) = a⁻¹(ax) = (a⁻¹a)x = 1 · x = x (mod 26).",
       },
     ],
   },
 
   // ════════════════════════════════════════════════════════════════
-  // LAB 03 — AFFINE & PRODUCT CIPHER
+  // LAB 03 — PRODUCT CIPHER: TRANSFORMATION PIPELINE FAILURE
   // ════════════════════════════════════════════════════════════════
   {
     id: 3,
     number: "03",
-    title: "Affine & Product Cipher",
-    topic: "Affine Cipher and Product Cipher",
-    category: "CLASSICAL CIPHERS",
+    title: "Product Cipher Laboratory: Transformation Pipeline Failure",
+    topic: "Product Cipher",
+    category: "CASE STUDY // PIPELINE FAILURE",
     shortDescription:
-      "Apply Affine transformations and understand sequential Product Cipher operations.",
-    difficulty: "Intermediate",
+      "Investigate a two-stage cryptographic pipeline breakdown, diagnose inverted transformation sequences, and execute correct reverse-order decryption.",
+    difficulty: "Intermediate–Advanced",
     estimatedTime: "~10 minutes",
     maxScore: 100,
     objective:
-      "Understand the mathematical structure of the Affine Cipher and learn how multiple transformations compose into a Product Cipher.",
+      "Inspect a multi-stage cipher composition (Caesar then Affine), diagnose incorrect inversion order defects, execute strict reverse-order decryption, and reduce the pipeline to an equivalent single-stage Affine transformation.",
     guidelines: {
       whatYouWillDo: [
-        "Identify which values of the multiplicative key 'a' are valid for Affine encryption.",
-        "Encrypt a plaintext using the Affine Cipher with given keys.",
-        "Trace the two-stage Product Cipher pipeline and identify the intermediate result.",
-        "Reverse the Product Cipher pipeline to recover the original plaintext.",
+        "Inspect the multi-stage encryption pipeline configuration: Caesar(K = 5) followed by Affine(a = 7, b = 10).",
+        "Compute and record the intermediate Caesar ciphertext state.",
+        "Generate the final Affine-transformed product ciphertext.",
+        "Diagnose the analyst's pipeline failure caused by attempting decryption in the wrong order.",
+        "Execute Step 1 of correct reverse decryption (Affine inverse).",
+        "Execute Step 2 of correct reverse decryption (Caesar inverse) to recover 'DEFEND THE MATRIX'.",
       ],
       whatYouNeedToKnow: [
-        "Affine Cipher: E(x) = (ax + b) mod 26.",
-        "The key 'a' MUST satisfy gcd(a, 26) = 1 for unique decryption to be possible.",
-        "Valid 'a' values: 1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25 (12 valid values).",
-        "Product Cipher = Caesar(P, shift) → Affine(result, a, b).",
-        "Decryption reverses the order: Affine⁻¹ → Caesar⁻¹.",
+        "In this project: Product Cipher = Caesar(K) followed by Affine(a, b).",
+        "Function composition is non-commutative: Affine(Caesar(P)) ≠ Caesar(Affine(P)).",
+        "Decryption must apply inverse operations in REVERSE order: (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹.",
+        "Linear composition: a(x + K) + b = ax + (aK + b) mod 26, which is equivalent to a single Affine cipher.",
       ],
       instructions: [
-        "Complete every task in order.",
-        "In Task 1, select ALL valid values of 'a' from the provided list.",
-        "In Task 2, calculate and enter the Affine ciphertext.",
-        "In Task 3, trace the Product Cipher and identify the intermediate text.",
-        "In Task 4, enter the recovered plaintext after reversing both transformations.",
-        "Hints are available but reduce the available task score.",
+        "Track intermediate text carefully between transformation layers.",
+        "Decryption must invert the second layer before inverting the first layer.",
+        "Earn all 100 points to complete this case study.",
       ],
     },
     tasks: [
       {
         id: 1,
-        title: "Valid Affine Key Selection",
+        title: "Inspect Pipeline & Calculate Intermediate State",
         description:
-          "From the list of candidate values for the Affine multiplicative key 'a', select ALL values that are valid (i.e., gcd(a, 26) = 1).",
-        points: 20,
-        type: "multi-select",
-        options: [
-          { value: 1, label: "a = 1" },
-          { value: 5, label: "a = 5" },
-          { value: 13, label: "a = 13" },
-          { value: 17, label: "a = 17" },
-          { value: 21, label: "a = 21" },
-        ],
-        expectedKey: "validAffineKeys",
-        expectedValues: [1, 5, 17, 21],
-        hints: [
-          { text: "Compute gcd(a, 26) for each candidate. Only values where gcd = 1 are valid.", cost: 5 },
-          { text: "Invalid: a=13 because gcd(13, 26) = 13 > 1. Valid: 1, 5, 17, 21.", cost: 5 },
-        ],
-        feedbackCorrect:
-          "Correct. Values 1, 5, 17, 21 all satisfy gcd(a, 26) = 1, making them valid multiplicative keys. The value a = 13 shares a common factor with 26 (gcd = 13), so it is not invertible modulo 26.",
-        feedbackIncorrect:
-          "Incorrect. Check each value: compute gcd(a, 26). If gcd = 1, the value is valid; if gcd > 1, it is invalid.",
-      },
-      {
-        id: 2,
-        title: "Affine Encryption",
-        description:
-          "Encrypt the plaintext below using the Affine Cipher with the given keys. Apply E(x) = (ax + b) mod 26 to each letter.",
-        points: 25,
+          "Case File Record: Plaintext 'DEFEND THE MATRIX' passes into Layer 1: Caesar shift K = 5. Calculate the exact intermediate text generated before Layer 2 executes.",
+        points: 15,
         type: "text-answer",
-        given: { plaintext: "HELLO", a: 5, b: 8 },
-        expectedKey: "affineEncrypt",
-        hints: [
-          { text: "H=7: (5×7+8) mod 26 = 43 mod 26 = 17 = R. Apply the same formula to each letter.", cost: 5 },
-          { text: "Letter-by-letter: H→R, E→C, L→L, L→L, O→A. The ciphertext is RCLLA.", cost: 5 },
-        ],
-        feedbackCorrect:
-          "Correct. With a=5, b=8: H(7)→R(17), E(4)→C(2), L(11)→L(11), L(11)→L(11), O(14)→A(0). Result: RCLLA.",
-        feedbackIncorrect:
-          "Incorrect. Apply E(x) = (5x + 8) mod 26 to each letter index (A=0 … Z=25).",
-      },
-      {
-        id: 3,
-        title: "Product Cipher — Intermediate Trace",
-        description:
-          "The Product Cipher applies Caesar first, then Affine. Given the plaintext and keys below, identify the INTERMEDIATE text (output of the Caesar layer before Affine is applied).",
-        points: 25,
-        type: "text-answer",
+        caseId: "CASE-P03 // STEP 1",
+        scenario:
+          "A secure gateway uses a layered product cipher. Telemetry logs show the message was processed by Layer 1 (Caesar) before being passed to Layer 2 (Affine).",
+        objective:
+          "Compute the intermediate state T = Caesar('DEFEND THE MATRIX', 5).",
+        evidence: {
+          pipelineStage: "Layer 1 of 2: Caesar Transformation",
+          inputPlaintext: "DEFEND THE MATRIX",
+          caesarShift: "K = 5",
+        },
         given: {
-          plaintext: "HELLO WORLD",
-          caesarShift: 3,
-          affineA: 5,
-          affineB: 8,
-          description: "Caesar(HELLO WORLD, shift=3) → Intermediate → Affine(Intermediate, a=5, b=8) → Ciphertext",
+          plaintext: "DEFEND THE MATRIX",
+          caesarShift: 5,
         },
         expectedKey: "caesarEncryptIntermediate",
         hints: [
-          { text: "The intermediate text is simply the output of Caesar encryption on the plaintext, before Affine is applied.", cost: 5 },
-          { text: "Caesar(HELLO WORLD, shift=3) = KHOOR ZRUOG. Enter that as the intermediate text.", cost: 5 },
+          { text: "Shift each letter forward by 5: D(3) → I(8), E(4) → J(9), F(5) → K(10)...", cost: 3 },
+          { text: "Intermediate text starts with 'IJKJSI YMJ...'. Full string: 'IJKJSI YMJ RFYWNC'.", cost: 4 },
         ],
         feedbackCorrect:
-          "Correct. HELLO WORLD encrypted with Caesar shift 3 produces KHOOR ZRUOG as the intermediate text. The Affine layer then transforms this further.",
+          "Intermediate state captured! 'DEFEND THE MATRIX' shifted by K=5 produces: 'IJKJSI YMJ RFYWNC'.",
         feedbackIncorrect:
-          "Incorrect. Apply only the Caesar cipher (shift 3) to HELLO WORLD to obtain the intermediate text.",
+          "Incorrect intermediate text. Apply Caesar shift K=5 to 'DEFEND THE MATRIX'. Expected: 'IJKJSI YMJ RFYWNC'.",
+      },
+      {
+        id: 2,
+        title: "Obtain Final Affine-Transformed Ciphertext",
+        description:
+          "Now apply Layer 2: Affine transformation with a = 7, b = 10 to the intermediate state 'IJKJSI YMJ RFYWNC' using E(x) = (7x + 10) mod 26.",
+        points: 20,
+        type: "text-answer",
+        caseId: "CASE-P03 // STEP 2",
+        scenario:
+          "The intermediate stream from Layer 1 is transformed by Layer 2 (Affine) to generate the final product ciphertext.",
+        objective:
+          "Compute the final product ciphertext C = Affine('IJKJSI YMJ RFYWNC', 7, 10).",
+        evidence: {
+          pipelineStage: "Layer 2 of 2: Affine Transformation",
+          intermediateInput: "IJKJSI YMJ RFYWNC",
+          affineKey: "a = 7, b = 10",
+        },
+        given: {
+          intermediate: "IJKJSI YMJ RFYWNC",
+          affineA: 7,
+          affineB: 10,
+        },
+        expectedKey: "productEncryptFinal",
+        expectedValue: "OVCVGO WQV ZTWIXY",
+        hints: [
+          { text: "Apply E(x) = (7x + 10) mod 26 to each letter of 'IJKJSI YMJ RFYWNC'.", cost: 4 },
+          { text: "I(8) → (56 + 10) mod 26 = 14 ('O'). J(9) → (63 + 10) mod 26 = 21 ('V'). Expected: 'OVCVGO WQV ZTWIXY'.", cost: 5 },
+        ],
+        feedbackCorrect:
+          "Final product ciphertext generated! 'IJKJSI YMJ RFYWNC' transformed by Affine(7, 10) produces: 'OVCVGO WQV ZTWIXY'.",
+        feedbackIncorrect:
+          "Incorrect ciphertext. Apply E(x) = (7x + 10) mod 26 to 'IJKJSI YMJ RFYWNC'. Expected: 'OVCVGO WQV ZTWIXY'.",
+      },
+      {
+        id: 3,
+        title: "Diagnose Pipeline Inversion Failure (Wrong Order)",
+        description:
+          "Incident Report: A field technician attempted recovery by running Caesar decryption FIRST, then Affine decryption, producing corrupted gibberish. Diagnose why reversing the decryption order caused complete pipeline failure.",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-P03 // STEP 3",
+        scenario:
+          "The field team reported a corrupted output from their automated decryption tool. Investigation reveals the stages were triggered in the wrong sequence.",
+        objective:
+          "Explain why composite transformations must be inverted in strict reverse order: (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹.",
+        options: [
+          "Function composition is non-commutative: Since encryption applied Caesar first then Affine second (g ∘ f), decryption must invert the outermost layer first (f⁻¹ ∘ g⁻¹). Applying Caesar inverse directly to Affine ciphertext shifts values before they are scaled, corrupting modular arithmetic",
+          "Caesar decryption produces negative numbers that break the Affine cipher",
+          "Because Caesar ciphers cannot process letters encrypted by Affine ciphers",
+          "Because the product cipher requires double the alphabet size",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Think of socks and shoes: shoes must be removed before socks. The last operation applied must be the first undone.", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Pipeline failure diagnosed! Inverting composite functions strictly requires reverse execution: (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹. Inverting Caesar first operates on scaled Affine residues, corrupting the recovery.",
+        feedbackIncorrect:
+          "Incorrect diagnosis. Decryption must reverse the transformation pipeline: Affine inverse must be executed first, followed by Caesar inverse.",
       },
       {
         id: 4,
-        title: "Reverse the Product Cipher",
+        title: "Execute Correct Inversion: Step 1 (Affine Decryption)",
         description:
-          "You are given the final Product Cipher ciphertext and all keys. Reverse the pipeline (Affine⁻¹ → Caesar⁻¹) to recover the original plaintext.",
-        points: 30,
+          "Execute Step 1 of correct decryption: Apply Affine inverse decryption with a = 7 (a⁻¹ = 15) and b = 10 to ciphertext 'OVCVGO WQV ZTWIXY' using D(y) = 15(y − 10) mod 26.",
+        points: 15,
         type: "text-answer",
-        given: {
-          caesarShift: 3,
-          affineA: 5,
-          affineB: 8,
-          description: "Ciphertext is the Product Cipher output of HELLO WORLD with shift=3, a=5, b=8.",
+        caseId: "CASE-P03 // STEP 4",
+        scenario:
+          "Correct the field team's mistake by executing the first inverse stage: removing Layer 2 (Affine).",
+        objective:
+          "Recover the intermediate Caesar state by applying Affine decryption.",
+        evidence: {
+          stepTarget: "Layer 2 Inversion",
+          inputCiphertext: "OVCVGO WQV ZTWIXY",
+          inverseKey: "a⁻¹ = 15, b = 10",
         },
-        expectedKey: "productDecrypt",
-        expectedPlaintext: "HELLO WORLD",
+        given: {
+          ciphertext: "OVCVGO WQV ZTWIXY",
+          affineA: 7,
+          affineB: 10,
+          a_inv: 15,
+        },
+        expectedKey: "productDecryptAffineStep",
+        expectedValue: "IJKJSI YMJ RFYWNC",
         hints: [
-          { text: "First apply Affine decryption (using a⁻¹=21 for a=5) to recover the Caesar intermediate.", cost: 5 },
-          { text: "Then apply Caesar decryption (shift=3) to the intermediate. Result: HELLO WORLD.", cost: 5 },
+          { text: "Apply D(y) = 15(y − 10) mod 26 to 'OVCVGO WQV ZTWIXY'.", cost: 3 },
+          { text: "This reverses Layer 2 and restores intermediate state: 'IJKJSI YMJ RFYWNC'.", cost: 4 },
         ],
         feedbackCorrect:
-          "Correct. Affine⁻¹ recovers KHOOR ZRUOG, then Caesar⁻¹ (shift 3) recovers HELLO WORLD. Decryption must reverse the layer order.",
+          "Step 1 inversion successful! Affine decryption of 'OVCVGO WQV ZTWIXY' restores intermediate state: 'IJKJSI YMJ RFYWNC'.",
         feedbackIncorrect:
-          "Incorrect. Remember to apply Affine decryption FIRST, then Caesar decryption. The order must be reversed relative to encryption.",
+          "Incorrect text. Affine decryption of 'OVCVGO WQV ZTWIXY' with a=7, b=10 must restore 'IJKJSI YMJ RFYWNC'.",
+      },
+      {
+        id: 5,
+        title: "Execute Correct Inversion: Step 2 (Caesar Decryption)",
+        description:
+          "Execute Step 2 of correct decryption: Apply Caesar inverse decryption (shift K = 5) to the recovered intermediate state 'IJKJSI YMJ RFYWNC' using P = (T − 5 + 26) mod 26.",
+        points: 15,
+        type: "text-answer",
+        caseId: "CASE-P03 // STEP 5",
+        scenario:
+          "With Layer 2 removed, invert Layer 1 (Caesar) to recover the original operational plaintext.",
+        objective:
+          "Recover the final operational plaintext.",
+        evidence: {
+          stepTarget: "Layer 1 Inversion",
+          intermediateInput: "IJKJSI YMJ RFYWNC",
+          caesarShift: "K = 5",
+        },
+        given: {
+          intermediate: "IJKJSI YMJ RFYWNC",
+          caesarShift: 5,
+        },
+        expectedKey: "productDecryptCaesarStep",
+        expectedValue: "DEFEND THE MATRIX",
+        hints: [
+          { text: "Shift each letter of 'IJKJSI YMJ RFYWNC' backward by 5 positions.", cost: 3 },
+          { text: "Plaintext restores the operational order: 'DEFEND THE MATRIX'.", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Pipeline recovery complete! Caesar decryption restores original operational plaintext: 'DEFEND THE MATRIX'.",
+        feedbackIncorrect:
+          "Incorrect plaintext. Shift each letter of 'IJKJSI YMJ RFYWNC' backward by 5 to recover 'DEFEND THE MATRIX'.",
+      },
+      {
+        id: 6,
+        title: "Sequential Transformation Equivalence & Debrief",
+        description:
+          "Algebraic Synthesis: The two-stage pipeline E(x) = 7(x + 5) + 10 mod 26 collapses into a single Affine cipher E(x) = (Ax + B) mod 26. Calculate the effective single-stage additive key B = (7·5 + 10) mod 26.",
+        points: 20,
+        type: "number-answer",
+        caseId: "CASE-P03 // DEBRIEF",
+        scenario:
+          "Demonstrate why chaining linear classical ciphers fails to provide exponential security improvements.",
+        objective:
+          "Calculate the effective single-stage additive parameter B.",
+        evidence: {
+          compositeFormula: "E(x) = 7(x + 5) + 10 = 7x + 35 + 10 = 7x + 45 mod 26",
+          modulus: "m = 26",
+        },
+        given: {
+          caesarShift: 5,
+          affineA: 7,
+          affineB: 10,
+        },
+        expectedKey: "numberValue",
+        expectedValue: 19,
+        hints: [
+          { text: "Compute 45 mod 26: 45 - 26 = 19. Enter 19.", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Case Study 3 Complete! B = (7 × 5 + 10) mod 26 = 45 mod 26 = 19. You proved that composing linear transformations collapses into a single affine key without increasing cryptographic security.",
+        feedbackIncorrect:
+          "Incorrect value for B. Compute (7 × 5 + 10) mod 26 = 45 mod 26 = 19.",
       },
     ],
   },
 
   // ════════════════════════════════════════════════════════════════
-  // LAB 04 — MONOALPHABETIC FREQUENCY ANALYSIS
+  // LAB 04 — SUBSTITUTION & FREQUENCY ANALYSIS: LEAKED MESSAGE
   // ════════════════════════════════════════════════════════════════
   {
     id: 4,
     number: "04",
-    title: "Monoalphabetic Frequency Analysis",
-    topic: "Frequency Analysis",
-    category: "FREQUENCY ANALYSIS",
+    title: "Substitution & Frequency Analysis: Investigating a Leaked Message",
+    topic: "Substitution & Frequency Analysis",
+    category: "CASE STUDY // LEAKED TRANSMISSION",
     shortDescription:
-      "Break a monoalphabetic substitution cipher using frequency and language analysis.",
+      "Investigate a leaked 134-character monoalphabetic substitution transcript, diagnose naive rank-matching errors, anchor trigrams, and map the key.",
     difficulty: "Advanced",
     estimatedTime: "~12 minutes",
     maxScore: 100,
     objective:
-      "Break a monoalphabetic substitution cipher using statistical properties of natural language without exhaustive key enumeration.",
+      "Conduct empirical statistical cryptanalysis on an intercepted leaked transmission, avoid naive unigram traps, anchor key mappings with trigrams, iteratively map the key with real-time preview, and evaluate statistical certainty.",
     guidelines: {
       whatYouWillDo: [
-        "Inspect an intercepted substitution ciphertext and its letter frequency table.",
-        "Form a substitution hypothesis by mapping the most frequent ciphertext letter to 'E'.",
-        "Build a letter mapping table to progressively decode the ciphertext.",
-        "Submit the fully recovered plaintext once all key letters are mapped.",
+        "Inspect the 134-character leaked transmission and generate its unigram frequency distribution.",
+        "Compare observed letter percentages with standard English corpus distributions.",
+        "Analyze high-frequency trigrams ('WKH' → 'THE') to establish confident mapping anchors.",
+        "Enforce one-to-one mapping constraints (injective bijectivity).",
+        "Diagnose and revise an initial incorrect mapping that created invalid word structures.",
+        "Configure the interactive substitution key mapper and recover the plaintext message.",
+        "Debrief on the forensic uncertainty limits of frequency analysis.",
       ],
       whatYouNeedToKnow: [
-        "Monoalphabetic substitution preserves plaintext letter frequencies in ciphertext.",
-        "In English, 'E' appears ~12.7%, 'T' ~9.1%, 'A' ~8.2%, 'O' ~7.5%.",
-        "The most frequent ciphertext letter likely represents 'E'.",
-        "Common trigram 'THE' in ciphertext pinpoints three letter mappings simultaneously.",
-        "26! key space makes brute force infeasible — frequency analysis is the correct technique.",
+        "Monoalphabetic substitution preserves the underlying frequency profile of the language.",
+        "English unigram frequencies (E ~12.7%, T ~9.1%) represent large averages; individual texts have variance.",
+        "Grammatical structure, short words ('THE', 'IS', 'OF'), and n-gram patterns provide decisive validation.",
       ],
       instructions: [
-        "Complete every task in order.",
-        "Task 1: Identify the most frequent ciphertext letter from the frequency table.",
-        "Task 2: Enter a mapping hypothesis for that letter.",
-        "Task 3: Use the interactive mapping table to build your substitution and observe the candidate plaintext live.",
-        "Task 4: Submit the final recovered plaintext.",
-        "Unmapped letters appear as '•' in the live preview — map all required letters before submitting.",
-        "Hints reduce available task points.",
+        "Examine the frequency distribution and context before setting mappings.",
+        "No two ciphertext letters may map to the same plaintext letter.",
+        "Earn all 100 points to complete this case study.",
       ],
     },
     tasks: [
       {
         id: 1,
-        title: "Frequency Observation",
+        title: "Inspect Leaked Ciphertext & Frequency Distribution",
         description:
-          "The frequency table below shows letter occurrences in the intercepted ciphertext. Identify the single most frequent ciphertext letter.",
-        points: 20,
+          "Examine the leaked transmission: 'ZKHQ WKH FLSKHUWHAW LV DQDOBCHG, OHWWHU IUHTXHQFLHV HASRVH WKH XQGHUOBLQJ SDWWHUQV EHFDXVH FHUWDLQ OHWWHUV UHFXU FRQVLVWHQWOB.' Enter the single most frequent ciphertext letter.",
+        points: 15,
         type: "freq-observation",
+        caseId: "CASE-S04 // STEP 1",
+        scenario:
+          "Internal counter-intelligence intercepted a leaked 134-character memo encoded with a monoalphabetic substitution cipher. The analyst must generate the frequency profile to establish primary cryptanalytic targets.",
+        objective:
+          "Inspect the frequency table and identify the dominant ciphertext letter peak.",
+        evidence: {
+          dossierId: "LEAK-INTEL-992",
+          characterCount: "134 characters",
+          suspectedFamily: "Monoalphabetic Substitution",
+          ciphertext:
+            "ZKHQ WKH FLSKHUWHAW LV DQDOBCHG, OHWWHU IUHTXHQFLHV HASRVH WKH XQGHUOBLQJ SDWWHUQV EHFDXVH FHUWDLQ OHWWHUV UHFXU FRQVLVWHQWOB.",
+        },
         given: {
-          ciphertext: "ZIT LTEKTZ EGRT OL IORRTF OF ZIT UQKRTF",
-          expectedMostFrequent: "T",
+          ciphertext:
+            "ZKHQ WKH FLSKHUWHAW LV DQDOBCHG, OHWWHU IUHTXHQFLHV HASRVH WKH XQGHUOBLQJ SDWWHUQV EHFDXVH FHUWDLQ OHWWHUV UHFXU FRQVLVWHQWOB.",
+          expectedMostFrequent: "H",
         },
         expectedKey: "mostFrequentLetter",
         hints: [
-          { text: "Sort the frequency table in descending order. The letter appearing most often is your answer.", cost: 5 },
-          { text: "In this ciphertext, 'T' appears most frequently, consistent with 'E' in English.", cost: 5 },
+          { text: "Examine the frequency table. Letter 'H' appears 22 times (20.2%). Enter 'H'.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. 'T' is the most frequent letter in this ciphertext. In English, 'E' is the most common letter (~12.7%), so 'T' likely represents 'E'.",
+          "Dominant peak identified! Ciphertext letter 'H' occurs 22 times (20.2%), making it the prime candidate for standard English high-frequency letters (such as 'E').",
         feedbackIncorrect:
-          "Incorrect. Count each letter occurrence in the ciphertext. The letter with the highest count is the most frequent.",
+          "Incorrect letter. Inspect the frequency table and enter the single letter with 22 occurrences ('H').",
       },
       {
         id: 2,
-        title: "Mapping Hypothesis",
+        title: "Compare Observed vs Expected English Frequencies",
         description:
-          "Based on your frequency observation, form an initial substitution hypothesis. Which plaintext letter does the most frequent ciphertext letter most likely represent?",
-        points: 25,
-        type: "mapping-hypothesis",
-        given: {
-          cipherLetter: "T",
-          correctPlainLetter: "E",
-        },
-        expectedKey: "mappingHypothesis",
+          "Why is it a critical error in cryptanalysis to mechanically map the top 5 ciphertext letters directly to the top 5 English letters (E, T, A, O, I) purely by rank order?",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-S04 // STEP 2",
+        scenario:
+          "A novice investigator attempted to map ciphertext letters purely by rank order, producing illegible outputs.",
+        objective:
+          "Explain why statistical variance prevents blind rank-order matching.",
+        options: [
+          "Individual sample texts exhibit variance from global corpus averages; without verifying n-grams and valid grammatical words, blind unigram rank matching produces unpronounceable gibberish",
+          "English letter frequencies invert every twenty years",
+          "Frequency analysis only functions if the text contains over 10,000 words",
+          "Substitution ciphers randomly shift letter positions during transmission",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
         hints: [
-          { text: "In English, the letter 'E' accounts for approximately 12.7% of all letters — more than any other.", cost: 5 },
-          { text: "The most frequent ciphertext letter 'T' most likely represents the most frequent English letter 'E'.", cost: 5 },
+          { text: "A 130-word sample differs from a million-word dictionary average due to natural statistical variance.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct hypothesis. T → E. This matches the statistical pattern: the most frequent ciphertext letter corresponds to the most frequent English letter.",
+          "Statistical principle verified! Sample variance causes rank order shifts. Linguistic context and n-grams are required to confirm hypotheses.",
         feedbackIncorrect:
-          "Incorrect. The most frequent ciphertext letter statistically corresponds to the most frequent English letter, which is 'E'.",
+          "Incorrect answer. Statistical variance across samples means rank order matching alone frequently fails.",
       },
       {
         id: 3,
-        title: "Candidate Plaintext Construction",
+        title: "Investigate Likely Bigrams & Trigrams",
         description:
-          "Use the interactive mapping table to assign plaintext letters to ciphertext letters. The candidate plaintext updates live as you build the mapping. Use the provided starting clues and your frequency analysis to complete the mapping.",
-        points: 25,
-        type: "mapping-interactive",
-        given: {
-          ciphertext: "ZIT LTEKTZ EGRT OL IORRTF OF ZIT UQKRTF",
-          providedClues: { Z: "T", I: "H", T: "E" },
-          expectedAnswer: "THE SECRET CODE IS HIDDEN IN THE GARDEN",
+          "The three-letter token 'WKH' appears three times in the leaked memo ('WKH FLSKHUWHAW', 'WKH XQGHUOBLQJ...'). Knowing 'THE' is the most frequent English trigram, deduce the mappings for W, K, and H.",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-S04 // STEP 3",
+        scenario:
+          "To avoid the unigram trap, the analyst searches for structural n-grams that anchor the substitution alphabet.",
+        objective:
+          "Anchor the substitution mapping by aligning the repeated token 'WKH' with 'THE'.",
+        evidence: {
+          repeatedTrigram: "WKH (3 occurrences)",
+          linguisticPrior: "'THE' accounts for >60% of all 3-letter words in English text.",
         },
-        expectedKey: "mappingInteractive",
+        options: [
+          "W → T, K → H, H → E (reinforces Task 1 where 'H' was the #1 frequency peak)",
+          "W → A, K → N, H → D",
+          "W → F, K → O, H → R",
+          "W → Y, K → O, H → U",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
         hints: [
-          { text: "With Z→T, I→H, T→E: 'ZIT' = 'THE'. Try to identify 'LTEKTZ' (6 letters starting with L→S).", cost: 5 },
-          { text: "LTEKTZ = SECRET (L→S, E→C, K→R, T→E, Z→T). Then OL = IS, IORRTF = HIDDEN, OF = IN, UQKRTF = GARDEN.", cost: 5 },
+          { text: "Align 'WKH' letter-for-letter to 'THE': W→T, K→H, H→E.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. All mappings are consistent. THE SECRET CODE IS HIDDEN IN THE GARDEN is the recovered plaintext.",
+          "Trigram anchored! W → T, K → H, and H → E. This confirms that the statistical peak 'H' represents 'E'.",
         feedbackIncorrect:
-          "The candidate plaintext does not match. Ensure all ciphertext letters are mapped and that mapped letters are consistent with English words.",
+          "Incorrect mapping. 'WKH' corresponds to 'THE': W → T, K → H, and H → E.",
       },
       {
         id: 4,
-        title: "Recover the Plaintext",
+        title: "Enforce One-to-One Letter Mapping Constraints",
         description:
-          "Using your completed mapping from Task 3, enter the fully recovered plaintext message.",
-        points: 30,
-        type: "text-answer",
-        given: {
-          ciphertext: "ZIT LTEKTZ EGRT OL IORRTF OF ZIT UQKRTF",
-          expectedAnswer: "THE SECRET CODE IS HIDDEN IN THE GARDEN",
-        },
-        expectedKey: "freqAnalysisPlaintext",
+          "In a valid monoalphabetic substitution cipher, why is it strictly forbidden for two distinct ciphertext letters (e.g. W and V) to map to the same plaintext letter (e.g. T)?",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-S04 // STEP 4",
+        scenario:
+          "The analyst reviews the mathematical definition of a monoalphabetic substitution key to avoid invalid key assignments.",
+        objective:
+          "Explain the mathematical injection requirement of substitution keys.",
+        options: [
+          "Monoalphabetic substitution requires a bijective (one-to-one) permutation; mapping multiple ciphertext letters to one plaintext letter creates irreversible collisions and destroys decipherability",
+          "The keyboard layout does not support duplicate mappings",
+          "Transmitting duplicate letters triggers an automated firewall alarm",
+          "It is permitted, but only on vowels",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
         hints: [
-          { text: "If you completed the mapping in Task 3, copy the candidate plaintext directly.", cost: 5 },
-          { text: "The plaintext is: THE SECRET CODE IS HIDDEN IN THE GARDEN.", cost: 5 },
+          { text: "A substitution key is a permutation of the 26 letters: each letter must map uniquely.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. THE SECRET CODE IS HIDDEN IN THE GARDEN. Frequency analysis successfully broke the monoalphabetic substitution without enumerating any of the 26! keys.",
+          "Permutation constraint confirmed! Substitution keys must be bijective (one-to-one) permutations of the 26-letter alphabet.",
         feedbackIncorrect:
-          "Incorrect. Ensure your letter mapping is complete and consistent, then re-read the candidate plaintext.",
+          "Incorrect answer. Monoalphabetic substitution requires a one-to-one bijective permutation to maintain unique invertibility.",
+      },
+      {
+        id: 5,
+        title: "Revise Initial Incorrect Mapping Using Evidence",
+        description:
+          "A junior analyst proposed mapping Q → O based on count ranks, turning the opening word 'ZKHQ' into 'W H E O'. Examining the sentence context, what is the correct plaintext letter for ciphertext 'Q'?",
+        points: 15,
+        type: "text-answer",
+        caseId: "CASE-S04 // STEP 5",
+        scenario:
+          "Contextual revision: Word structure 'W H E _' reveals the correct terminal consonant.",
+        objective:
+          "Revise the erroneous letter assignment and determine the correct plaintext letter for ciphertext Q.",
+        evidence: {
+          ciphertextWord: "ZKHQ",
+          anchorsKnown: "Z → W, K → H, H → E",
+          resultingPattern: "W H E [?]",
+        },
+        expectedKey: "textValue",
+        expectedValue: "N",
+        hints: [
+          { text: "In English grammar, what 4-letter conjunction begins with 'WHE-'? 'WHEN'.", cost: 3 },
+          { text: "Therefore ciphertext Q corresponds to plaintext N. Enter 'N'.", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Mapping revised! Ciphertext Q represents plaintext 'N', resolving 'ZKHQ' to the English word 'WHEN'.",
+        feedbackIncorrect:
+          "Incorrect letter. 'W H E [?]' forms the word 'WHEN'. Enter 'N'.",
+      },
+      {
+        id: 6,
+        title: "Interactive Key Mapping & Plaintext Recovery",
+        description:
+          "Configure the interactive substitution key mapper with your verified anchors to decrypt the complete leaked transmission with live preview.",
+        points: 15,
+        type: "mapping-interactive",
+        caseId: "CASE-S04 // STEP 6",
+        scenario:
+          "Use the interactive mapping panel to substitute the remaining ciphertext letters and reconstruct the full text.",
+        objective:
+          "Complete the substitution mapping to reconstruct the full leaked message.",
+        evidence: {
+          anchorsEstablished: "W→T, K→H, H→E, Z→W, Q→N, L→I, V→S",
+          ciphertext:
+            "ZKHQ WKH FLSKHUWHAW LV DQDOBCHG, OHWWHU IUHTXHQFLHV HASRVH WKH XQGHUOBLQJ SDWWHUQV EHFDXVH FHUWDLQ OHWWHUV UHFXU FRQVLVWHQWOB.",
+        },
+        given: {
+          ciphertext:
+            "ZKHQ WKH FLSKHUWHAW LV DQDOBCHG, OHWWHU IUHTXHQFLHV HASRVH WKH XQGHUOBLQJ SDWWHUQV EHFDXVH FHUWDLQ OHWWHUV UHFXU FRQVLVWHQWOB.",
+          providedClues: { W: "T", K: "H", H: "E" },
+          expectedAnswer:
+            "WHEN THE CIPHERTEXT IS ANALYZED, LETTER FREQUENCIES EXPOSE THE UNDERLYING PATTERNS BECAUSE CERTAIN LETTERS RECUR CONSISTENTLY.",
+        },
+        expectedKey: "mappingInteractive",
+        hints: [
+          { text: "Notice all letters follow a uniform shift of 3 positions: Z→W, Q→N, L→I, V→S, F→C, P→M, U→R...", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Full message recovered! The live preview reveals: 'WHEN THE CIPHERTEXT IS ANALYZED, LETTER FREQUENCIES EXPOSE THE UNDERLYING PATTERNS BECAUSE CERTAIN LETTERS RECUR CONSISTENTLY.'.",
+        feedbackIncorrect:
+          "Mapping incomplete. Adjust the selectors until the live preview produces readable English.",
+      },
+      {
+        id: 7,
+        title: "Verification & Forensic Uncertainty Debrief",
+        description:
+          "Case Debrief: Which factors explain why frequency analysis assists cryptanalysis but does not guarantee an automated, unique solution on arbitrary texts?",
+        points: 10,
+        type: "multiple-choice",
+        caseId: "CASE-S04 // DEBRIEF",
+        scenario:
+          "Complete the final case debrief on the probabilistic nature of statistical cryptanalysis.",
+        objective:
+          "Explain why frequency analysis requires contextual verification rather than pure automation.",
+        options: [
+          "Short messages, technical jargon, and constrained vocabularies produce statistical anomalies where letter counts deviate from global averages; cryptanalysis requires verifying n-grams, grammatical context, and dictionary validity",
+          "Because frequency analysis only works on texts written in Latin",
+          "Because computers cannot calculate percentages accurately",
+          "Because substitution ciphers re-encrypt every third word",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Small sample sizes deviate from dictionary averages, requiring human linguistic judgment.", cost: 2 },
+        ],
+        feedbackCorrect:
+          "Case Study 4 Complete! Statistical analysis provides probabilistic clues, but dictionary context and n-grams are required for definitive proof. Outstanding investigation!",
+        feedbackIncorrect:
+          "Incorrect debrief. Statistical anomalies in short texts mean frequency analysis requires contextual and linguistic validation.",
       },
     ],
   },
 
   // ════════════════════════════════════════════════════════════════
-  // LAB 05 — CRYPTANALYSIS INVESTIGATION
+  // LAB 05 — CRYPTANALYSIS MISSION: CHOOSE THE RIGHT ATTACK
   // ════════════════════════════════════════════════════════════════
   {
     id: 5,
     number: "05",
-    title: "Cryptanalysis Investigation",
-    topic: "Choosing the Appropriate Attack",
-    category: "FINAL INVESTIGATION",
+    title: "Cryptanalysis Mission: Choose the Right Attack",
+    topic: "Cryptanalysis Mission",
+    category: "SPECIAL MISSION // FULL INVESTIGATION",
     shortDescription:
-      "Analyze an intercepted message and select an appropriate cryptanalysis strategy.",
+      "Investigate an unclassified transmission with unspecified cipher family: evaluate structural evidence, calculate keyspaces, compare attack strategies, and extract tactical orders.",
     difficulty: "Advanced",
-    estimatedTime: "~10 minutes",
+    estimatedTime: "~12 minutes",
     maxScore: 100,
     objective:
-      "Develop the analytical skill of selecting the correct cryptanalytic technique based on cipher structure, key space, and feasibility.",
+      "Conduct an end-to-end investigation of intercepted intelligence: evaluate forensic evidence to identify the cipher family, calculate the keyspace, justify the optimal attack strategy against alternatives, recover tactical orders, and debrief on modern cryptography.",
     guidelines: {
       whatYouWillDo: [
-        "Identify the cipher type used in an intercepted message.",
-        "Select the appropriate attack strategy for a Caesar cipher scenario.",
-        "Select the appropriate attack strategy for a substitution cipher scenario.",
-        "Justify which approach is more practical for a given scenario with reasoning.",
+        "Examine intercepted tactical transmission 'WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.'",
+        "Formulate and test competing cipher family hypotheses using structural evidence (word lengths, double letters).",
+        "Calculate the exact mathematical keyspace and computational complexity.",
+        "Compare two plausible attack strategies (Exhaustive Brute-Force Key Search vs Statistical Frequency Mapping) and justify the selection.",
+        "Execute the automated cryptanalytic search engine.",
+        "Interpret output streams and recover the verified plaintext.",
+        "Deliver the mission debrief comparing classical vulnerabilities with modern 256-bit symmetric standards.",
       ],
       whatYouNeedToKnow: [
-        "Caesar Cipher: 26-key space → Brute Force is feasible (microseconds).",
-        "Monoalphabetic Substitution: 26! key space → Brute Force is infeasible (billions of years).",
-        "Frequency analysis exploits statistical patterns preserved in monoalphabetic ciphers.",
-        "Attack selection depends on: key space size, cipher structure, and statistical properties.",
-        "A large key space alone does not guarantee security — frequency patterns may still leak information.",
+        "Preserved word structures (lengths: 12, 6, 5, 6, 3, 10, 2, 4, 7, 3, 9, 4) and doubled letters ('ZZ', 'SS', 'BB') strongly indicate a monoalphabetic transformation.",
+        "A search space of 26 keys can be exhaustively searched in constant time O(1).",
+        "Exhaustive search on small keyspaces is strictly superior to statistical heuristics because it guarantees finding the exact plaintext without ambiguity.",
       ],
       instructions: [
-        "Complete every task in order.",
-        "Read each scenario carefully before selecting your answer.",
-        "Tasks 1–3 test specific identification and strategy skills.",
-        "Task 4 tests your ability to reason about feasibility and attack selection.",
-        "There are no trick questions — base your answers on the principles learned in this lab.",
-        "Hints are available but reduce available task points.",
+        "Follow the forensic cryptanalytic workflow from evidence to plaintext.",
+        "Earn all 100 points to complete Lab 05 and claim your Academy commendation.",
       ],
     },
     tasks: [
       {
         id: 1,
-        title: "Identify the Cipher Type",
+        title: "Examine Intercepted Message & Evidence Dossier",
         description:
-          'Scenario: An analyst intercepts the message "KHOOR ZRUOG". It is suspected to be a simple shift cipher where every letter has been moved forward by a fixed number of positions in the alphabet. Identify the cipher type.',
-        points: 20,
+          "Intercepted transmission: 'WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.' Examine the evidence dossier and identify the most plausible cipher family.",
+        points: 10,
         type: "multiple-choice",
+        caseId: "CASE-M05 // STEP 1",
+        scenario:
+          "The agency intercepted an unknown transmission from an unflagged transmitter. The cipher family was not declared in the communication header.",
+        objective:
+          "Analyze the structural evidence and identify the cipher family.",
+        evidence: {
+          interceptId: "OP-NIGHTWATCH-007",
+          rawCiphertext:
+            "WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.",
+          structuralObservation:
+            "Word boundaries intact (lengths 12, 6, 5, 6, 3, 10, 2, 4, 7, 3, 9, 4); punctuation (colon, periods) preserved; doubled letters present ('ZZ', 'SS').",
+        },
         options: [
-          "Affine Cipher",
-          "Vigenère Cipher",
-          "Caesar Cipher",
-          "Monoalphabetic Substitution Cipher",
+          "Monoalphabetic Shift (Caesar Cipher): Preserved word lengths, punctuation, and recurring doubled letters ('ZZ' in WBHSZZWUSBQS, 'SS' in SBSAM) indicate a uniform one-to-one letter shift",
+          "Asymmetric RSA: The colon indicates a modular public exponent",
+          "Polyalphabetic Vigenère with long key: Uniform shifts are impossible in monoalphabetic ciphers",
+          "Cryptographic SHA-256 Hash Digest: The output is a one-way representation",
         ],
         expectedKey: "multipleChoice",
-        expectedValue: 2,
+        expectedValue: 0,
         hints: [
-          { text: "The description says 'every letter moved forward by a fixed number of positions'. This is the defining property of a specific classical cipher.", cost: 5 },
-          { text: "A fixed single shift applied uniformly to all letters is the Caesar Cipher.", cost: 5 },
+          { text: "Notice doubled letters: 'ZZ' matches 'LL' in 'INTELLIGENCE', 'SS' matches 'EE' in 'ENEMY'.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. A uniform fixed shift applied to every letter is the defining characteristic of the Caesar Cipher, a specific monoalphabetic shift cipher.",
+          "Evidence confirmed! Preserved word boundaries, punctuation, and doubled letters ('ZZ', 'SS') signify a monoalphabetic shift cipher.",
         feedbackIncorrect:
-          "Incorrect. Read the scenario again: every letter is moved by the same fixed amount. Which cipher is defined by a single constant shift?",
+          "Incorrect hypothesis. Doubled letter preservation ('ZZ', 'SS') and preserved word boundaries indicate a monoalphabetic shift cipher.",
       },
       {
         id: 2,
-        title: "Select the Attack Strategy",
+        title: "Estimate Relevant Keyspace & Complexity",
         description:
-          "For the Caesar cipher scenario from Task 1, select the most appropriate and efficient cryptanalytic attack strategy.",
-        points: 25,
-        type: "multiple-choice",
-        options: [
-          "Frequency Analysis — analyse letter frequency distribution",
-          "Brute Force — test all 26 possible shift values",
-          "Known-Plaintext Attack — compare plaintext/ciphertext letter pairs",
-          "N-Gram Analysis — inspect digraph and trigraph patterns",
-        ],
-        expectedKey: "multipleChoice",
-        expectedValue: 1,
+          "Calculate the exact theoretical keyspace size for this monoalphabetic shift cipher over the English alphabet (0–25).",
+        points: 15,
+        type: "number-answer",
+        caseId: "CASE-M05 // STEP 2",
+        scenario:
+          "The analyst must estimate the computational search complexity before deploying cryptanalytic resources.",
+        objective:
+          "Calculate the total number of possible shift keys in the search space.",
+        evidence: {
+          cipherFamily: "Monoalphabetic Shift",
+          alphabetSize: "26 letters (A = 0, ..., Z = 25)",
+        },
+        given: { alphabetSize: 26 },
+        expectedKey: "numberValue",
+        expectedValue: 26,
         hints: [
-          { text: "Consider how many keys Caesar has. Is it feasible to test all of them?", cost: 5 },
-          { text: "26 keys × ~1 microsecond each = 26 microseconds total. Brute force is the direct and natural attack.", cost: 5 },
+          { text: "How many shift values exist from 0 to 25? Exactly 26 keys. Enter 26.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. With only 26 possible shifts, brute force is the most direct attack. All candidates are generated and evaluated in microseconds, with the correct one identified by a language fitness function.",
+          "Keyspace confirmed! Exactly 26 possible shift keys exist, making manual or automated exhaustive search trivial in O(1) time.",
         feedbackIncorrect:
-          "Incorrect. Consider the size of the key space first. For Caesar, can you enumerate ALL possible keys in a reasonable time?",
+          "Incorrect keyspace size. The Caesar cipher has shifts 0 through 25, totaling 26 possible keys.",
       },
       {
         id: 3,
-        title: "Second Scenario — Substitution Attack",
+        title: "Comparative Strategy Evaluation: Choose the Right Attack",
         description:
-          'Scenario: A second intercept reads: "ZIT LTEKTZ EGRT OL IORRTF OF ZIT UQKRTF". Analysis confirms this is a monoalphabetic substitution cipher with an arbitrary permutation key. Select the appropriate attack strategy.',
-        points: 25,
+          "Compare Strategy A (Exhaustive Brute-Force Key Search testing all 26 keys) with Strategy B (Statistical Frequency Analysis on the 86-character text). Why is Strategy A strictly superior for this mission?",
+        points: 15,
         type: "multiple-choice",
+        caseId: "CASE-M05 // STEP 3",
+        scenario:
+          "Before executing an attack, the analyst must defend their methodology against alternative approaches.",
+        objective:
+          "Justify why exhaustive brute-force search is optimal over statistical heuristics for small keyspaces.",
+        evidence: {
+          strategyA: "Exhaustive Key Search: Test all 26 shifts (<1 millisecond)",
+          strategyB: "Frequency Analysis: Count unigrams and manually fit candidate anchors",
+          messageLength: "86 characters (susceptible to sample variance)",
+        },
         options: [
-          "Brute Force — enumerate all possible permutations",
-          "Frequency Analysis — exploit preserved statistical language patterns",
-          "Caesar Decryption — apply all 26 shift values",
-          "Polyalphabetic Decryption — use Kasiski examination",
+          "Strategy A evaluates all 26 keys in <1 ms and guarantees deterministic recovery, whereas Strategy B suffers from small-sample statistical variance and requires manual trial-and-error",
+          "Strategy B is prohibited by military signals standards",
+          "Strategy A only works on odd-length ciphertexts",
+          "Strategy B cannot decrypt messages containing the letter 'E'",
         ],
         expectedKey: "multipleChoice",
-        expectedValue: 1,
+        expectedValue: 0,
         hints: [
-          { text: "Monoalphabetic substitution has 26! ≈ 4×10²⁶ keys. At 10¹² keys/sec: ~12.7 billion years. Brute force is infeasible.", cost: 5 },
-          { text: "The fixed one-to-one mapping preserves frequency distributions. Frequency analysis is the correct strategy.", cost: 5 },
+          { text: "With only 26 keys, brute force is instantaneous and 100% deterministic, eliminating all guesswork.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. With 26! keys, brute force is infeasible. However, the fixed one-to-one mapping preserves English letter frequencies in the ciphertext, enabling frequency analysis to deduce the key without enumeration.",
+          "Strategy justified! When the keyspace is minuscule (26 keys), exhaustive brute force is deterministic and instantaneous, eliminating all statistical variance.",
         feedbackIncorrect:
-          "Incorrect. Consider the key space size and whether frequency patterns are preserved. Which attack exploits statistical structure rather than exhaustive enumeration?",
+          "Incorrect strategy choice. Exhaustive search of 26 keys is instantaneous and deterministic, avoiding sample-size variance.",
       },
       {
         id: 4,
-        title: "Final Cryptanalysis Decision",
+        title: "Execute Cryptanalytic Attack Engine",
         description:
-          "You receive two ciphertexts: one from a Caesar cipher and one from a monoalphabetic substitution cipher. You must decide which attack to use for each. Which statement best describes the correct strategy selection?",
-        points: 30,
-        type: "multiple-choice",
-        options: [
-          "Always use frequency analysis regardless of the cipher, because it is always statistically robust.",
-          "Use brute force for Caesar (26 keys, trivial) and frequency analysis for substitution (26! keys, frequency patterns preserved).",
-          "Always use brute force because modern computers are fast enough for any classical cipher.",
-          "Frequency analysis is only useful when the ciphertext is longer than 500 characters.",
-        ],
-        expectedKey: "multipleChoice",
-        expectedValue: 1,
+          "Launch the automated brute-force attack engine on 'WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.' to generate all 26 candidate streams.",
+        points: 15,
+        type: "brute-force-action",
+        caseId: "CASE-M05 // STEP 4",
+        scenario:
+          "Deploy the automated cryptanalytic engine to execute the selected attack strategy.",
+        objective:
+          "Generate and index all 26 candidate plaintexts.",
+        evidence: {
+          engineStatus: "Ready for execution",
+          targetLength: "86 characters",
+        },
+        given: {
+          ciphertext:
+            "WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.",
+        },
+        expectedKey: "bruteForceRun",
         hints: [
-          { text: "Strategy depends on key space size AND preserved statistical structure — consider both factors.", cost: 5 },
-          { text: "Caesar: small key space → brute force. Substitution: huge key space but frequency preserved → frequency analysis.", cost: 5 },
+          { text: "Click 'Run Exhaustive Brute-Force Engine' to generate the candidate list.", cost: 3 },
         ],
         feedbackCorrect:
-          "Correct. Attack selection is determined by the cipher properties: Caesar's 26-key space makes brute force trivial; substitution's 26! key space makes brute force infeasible but its frequency-preserving nature makes statistical analysis effective.",
+          "Attack executed! All 26 candidate streams are indexed below for telemetry inspection.",
         feedbackIncorrect:
-          "Incorrect. Consider both the key space size AND whether letter frequencies are preserved. No single attack suits all classical ciphers equally.",
+          "Click 'Run Exhaustive Brute-Force Engine' to generate the candidate streams.",
+      },
+      {
+        id: 5,
+        title: "Candidate Interpretation & Plaintext Recovery",
+        description:
+          "Inspect the generated candidate streams. Identify the shift key K that reveals the coherent operational military report.",
+        points: 15,
+        type: "number-answer",
+        caseId: "CASE-M05 // STEP 5",
+        scenario:
+          "Isolate the genuine military transmission from the decrypted candidate telemetry.",
+        objective:
+          "Identify the numerical shift key K corresponding to intelligible English orders.",
+        evidence: {
+          inspectionClue: "Notice candidate at K = 14 begins with 'INTELLIGENCE REPORT: ENEMY FORCES...'.",
+        },
+        given: {
+          ciphertext:
+            "WBHSZZWUSBQS FSDCFH: SBSAM TCFQSG OFS FSUFCIDWBU OH ROKB. DFSDOFS HVS RSTSBGWJS ZWBS.",
+        },
+        expectedKey: "numberValue",
+        expectedValue: 14,
+        hints: [
+          { text: "Inspect candidate K = 14: W(22)-14=8 ('I'), B(1)-14=13 ('N'), H(7)-14=19 ('T'). Enter 14.", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Key isolated! Shift K = 14 deciphers the intelligence: 'INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.'.",
+        feedbackIncorrect:
+          "Incorrect key. Inspect candidate K = 14 to recover the tactical intelligence report.",
+      },
+      {
+        id: 6,
+        title: "Full Plaintext Verification",
+        description:
+          "Transcribe and verify the complete recovered tactical orders decrypted under shift K = 14.",
+        points: 15,
+        type: "text-answer",
+        caseId: "CASE-M05 // STEP 6",
+        scenario:
+          "Submit the decrypted tactical intelligence to headquarters for immediate operational response.",
+        objective:
+          "Verify the exact recovered plaintext transmission.",
+        evidence: {
+          selectedShift: "K = 14",
+          expectedPlaintext:
+            "INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.",
+        },
+        expectedKey: "textValue",
+        expectedValue:
+          "INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.",
+        hints: [
+          { text: "Enter: 'INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.'", cost: 4 },
+        ],
+        feedbackCorrect:
+          "Tactical intelligence verified! 'INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.'.",
+        feedbackIncorrect:
+          "Incorrect plaintext. Enter: 'INTELLIGENCE REPORT: ENEMY FORCES ARE REGROUPING AT DAWN. PREPARE THE DEFENSIVE LINE.'.",
+      },
+      {
+        id: 7,
+        title: "Evidence-Based Defense Debrief",
+        description:
+          "Why is modern symmetric encryption (such as AES-256) mathematically impervious to the exhaustive brute-force attack executed in this mission?",
+        points: 15,
+        type: "multiple-choice",
+        caseId: "CASE-M05 // DEBRIEF",
+        scenario:
+          "Final mission debrief comparing classical keyspaces with modern 256-bit symmetric standards.",
+        objective:
+          "Contrast the 26-key classical space with the 2²⁵⁶ modern keyspace.",
+        options: [
+          "AES-256 has a keyspace of 2²⁵⁶ (≈1.15 × 10⁷⁷ keys); even all the world's supercomputers running for billions of years cannot evaluate a noticeable fraction of this space",
+          "AES keys are rotated every 5 seconds via GPS signals",
+          "AES only uses prime numbers greater than 1,000,000",
+          "AES deletes the ciphertext from memory immediately upon reception",
+        ],
+        expectedKey: "multipleChoice",
+        expectedValue: 0,
+        hints: [
+          { text: "Compare 26 keys with 2²⁵⁶ keys (115 quinvigintillion combinations).", cost: 3 },
+        ],
+        feedbackCorrect:
+          "Mission Debrief Complete! The astronomical keyspace of 2²⁵⁶ (≈1.15 × 10⁷⁷ keys) makes exhaustive search physically impossible under known physics. Outstanding cryptanalytic work, Agent!",
+        feedbackIncorrect:
+          "Incorrect debrief. The insurmountable defense of AES-256 is its astronomical 256-bit keyspace (2²⁵⁶ ≈ 1.15 × 10⁷⁷ keys).",
       },
     ],
   },

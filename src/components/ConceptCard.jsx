@@ -1,36 +1,19 @@
-import { useState } from "react";
+import ConceptQuiz from "./ConceptQuiz";
 
 /**
  * ConceptCard Component
  * Displays rich pedagogical details for the active concept, including
- * interactive visual diagrams, definitions, examples, Viva Q&A, and an
- * optional 5-question interactive quiz for Affine and Product Cipher concepts.
+ * interactive visual diagrams, definitions, examples, Viva Q&A, and
+ * the updated 10-question university-level cryptanalysis quiz.
  */
-export default function ConceptCard({ concept, isViewed, onToggleViewed }) {
-  const [quizAnswers, setQuizAnswers] = useState({});
-  const [quizSubmitted, setQuizSubmitted] = useState({});
-
+export default function ConceptCard({
+  concept,
+  isViewed,
+  onToggleViewed,
+  quizState,
+  quizHandlers,
+}) {
   if (!concept) return null;
-
-  const handleSelectAnswer = (qId, optionIdx) => {
-    if (quizSubmitted[qId]) return; // locked after submission
-    setQuizAnswers((prev) => ({ ...prev, [qId]: optionIdx }));
-  };
-
-  const handleSubmitAnswer = (qId) => {
-    if (quizAnswers[qId] === undefined) return;
-    setQuizSubmitted((prev) => ({ ...prev, [qId]: true }));
-  };
-
-  const hasQuiz = concept.quiz && concept.quiz.length > 0;
-  const quizScore = hasQuiz
-    ? concept.quiz.filter(
-        (q) => quizSubmitted[q.id] && quizAnswers[q.id] === q.answer
-      ).length
-    : 0;
-  const quizTotal = hasQuiz ? concept.quiz.length : 0;
-  const allSubmitted =
-    hasQuiz && concept.quiz.every((q) => quizSubmitted[q.id]);
 
   return (
     <div className="concept-display-card">
@@ -390,98 +373,12 @@ export default function ConceptCard({ concept, isViewed, onToggleViewed }) {
         <p>&ldquo;{concept.vivaTakeaway}&rdquo;</p>
       </div>
 
-      {/* INTERACTIVE QUIZ SECTION */}
-      {hasQuiz && (
-        <div className="concept-quiz-section">
-          <div className="quiz-header">
-            <span className="quiz-header-icon">📝</span>
-            <div>
-              <strong>Self-Assessment Quiz</strong>
-              <span className="quiz-subtitle">5 Questions — Test your understanding of {concept.title}</span>
-            </div>
-            {allSubmitted && (
-              <div className={`quiz-score-pill ${quizScore >= 4 ? "score-great" : quizScore >= 2 ? "score-ok" : "score-low"}`}>
-                Score: {quizScore} / {quizTotal}
-              </div>
-            )}
-          </div>
-
-          <div className="quiz-questions-list">
-            {concept.quiz.map((q, qIdx) => {
-              const selected = quizAnswers[q.id];
-              const submitted = quizSubmitted[q.id];
-              const isCorrect = submitted && selected === q.answer;
-              const isWrong = submitted && selected !== q.answer;
-
-              return (
-                <div
-                  key={q.id}
-                  className={`quiz-question-card ${submitted ? (isCorrect ? "q-correct" : "q-wrong") : ""}`}
-                >
-                  <div className="quiz-question-header">
-                    <span className="quiz-q-num">Q{qIdx + 1}</span>
-                    <p className="quiz-q-text">{q.question}</p>
-                  </div>
-
-                  <div className="quiz-options">
-                    {q.options.map((opt, optIdx) => {
-                      let optClass = "quiz-option";
-                      if (submitted) {
-                        if (optIdx === q.answer) optClass += " opt-correct";
-                        else if (optIdx === selected && isWrong) optClass += " opt-wrong";
-                      } else if (selected === optIdx) {
-                        optClass += " opt-selected";
-                      }
-
-                      return (
-                        <button
-                          key={optIdx}
-                          type="button"
-                          className={optClass}
-                          onClick={() => handleSelectAnswer(q.id, optIdx)}
-                          disabled={submitted}
-                          aria-label={`Option ${optIdx + 1}: ${opt}`}
-                        >
-                          <span className="opt-letter">{String.fromCharCode(65 + optIdx)}</span>
-                          <span className="opt-text">{opt}</span>
-                          {submitted && optIdx === q.answer && <span className="opt-check">✓</span>}
-                          {submitted && optIdx === selected && isWrong && <span className="opt-x">✗</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {!submitted && (
-                    <button
-                      type="button"
-                      className="lab-btn primary-btn quiz-submit-btn"
-                      onClick={() => handleSubmitAnswer(q.id)}
-                      disabled={selected === undefined}
-                    >
-                      Submit Answer
-                    </button>
-                  )}
-
-                  {submitted && (
-                    <div className={`quiz-explanation ${isCorrect ? "explanation-correct" : "explanation-wrong"}`}>
-                      <span>{isCorrect ? "✓ Correct!" : "✗ Incorrect."}</span>
-                      <p>{q.explanation}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {allSubmitted && (
-            <div className={`quiz-final-result ${quizScore === quizTotal ? "result-perfect" : quizScore >= 3 ? "result-good" : "result-review"}`}>
-              {quizScore === quizTotal && <span>🏆 Perfect Score! Excellent understanding of {concept.title}.</span>}
-              {quizScore >= 3 && quizScore < quizTotal && <span>👍 Good work! Review the incorrect answers above.</span>}
-              {quizScore < 3 && <span>📖 Revisit the concept above before continuing.</span>}
-            </div>
-          )}
-        </div>
-      )}
+      {/* 10-QUESTION CRYPTOGRAPHY ASSESSMENT QUIZ */}
+      <ConceptQuiz
+        externalState={quizState}
+        externalHandlers={quizHandlers}
+        onBackToConcepts={null}
+      />
     </div>
   );
 }
