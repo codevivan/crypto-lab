@@ -1,0 +1,42 @@
+# Dependency and build directories
+node_modules
+dist
+dist-ssr
+
+# Version control
+.git
+.gitignore
+
+# Docker and CI files
+.dockerignore
+Dockerfile
+
+# Local environment and secret files
+.env
+.env.*
+*.local
+
+# Scratch and editor directories
+scratch
+.gemini
+.agents
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test scripts and documentation not needed in build
+test-*.js
+README.md
