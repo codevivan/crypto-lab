@@ -1,4 +1,10 @@
-# Experiment Aim: Monoalphabetic Cipher Cryptanalysis
+# Experiment Aim: Demonstrate the brute force and Frequency analysis attack/Breaking of any mono alphabetic cipher.
+
+
+
+
+
+
 
 ## Title of Experiment
 **Cryptanalysis of Monoalphabetic Substitution Ciphers using Brute-Force and Frequency-Analysis Attacks**
